@@ -308,6 +308,8 @@ static notrace void kvm_guest_apic_eoi_write(u32 reg, u32 val)
 
 static void kvm_guest_cpu_init(void)
 {
+        unsigned long cr4;
+
 	if (kvm_para_has_feature(KVM_FEATURE_ASYNC_PF) && kvmapf) {
 		u64 pa = slow_virt_to_phys(this_cpu_ptr(&apf_reason));
 
@@ -337,6 +339,26 @@ static void kvm_guest_cpu_init(void)
 
 	if (has_steal_clock)
 		kvm_register_steal_time();
+
+	/*
+	 * If virutalized by KVM then make the hypercall telling KVM to do the
+	 * VT assisted pinning.
+	 */
+	printk(pr_fmt("kvm_hypercall2(12, 4, 1): %ld\n"), kvm_hypercall2(12, 4, 1));
+
+	cr4 = native_read_cr4();
+
+	printk(pr_fmt("CR4 read: %lx\n"), cr4);
+
+	cr4 &= ~(X86_CR4_SMEP);
+
+	printk(pr_fmt("CR4 write: %lx\n"), cr4);
+
+	native_write_cr4(cr4);
+
+	cr4 = native_read_cr4();
+
+	printk(pr_fmt("CR4 read back: %lx\n"), cr4);
 }
 
 static void kvm_pv_disable_apf(void)

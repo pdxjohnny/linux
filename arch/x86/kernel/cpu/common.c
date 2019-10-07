@@ -53,6 +53,7 @@
 #include <asm/microcode_intel.h>
 #include <asm/intel-family.h>
 #include <asm/cpu_device_id.h>
+#include <uapi/linux/kvm_para.h>
 
 #ifdef CONFIG_X86_LOCAL_APIC
 #include <asm/uv/uv.h>
@@ -390,21 +391,21 @@ EXPORT_SYMBOL(native_write_cr0);
 
 void native_write_cr4(unsigned long val)
 {
-	unsigned long bits_missing = 0;
+	// unsigned long bits_missing = 0;
 
 set_register:
-	asm volatile("mov %0,%%cr4": "+r" (val), "+m" (cr4_pinned_bits));
+	asm volatile("mov %0,%%cr4": "+r" (val));
 
-	if (static_branch_likely(&cr_pinning)) {
-		if (unlikely((val & cr4_pinned_bits) != cr4_pinned_bits)) {
-			bits_missing = ~val & cr4_pinned_bits;
-			val |= bits_missing;
-			goto set_register;
-		}
-		/* Warn after we've set the missing bits. */
-		WARN_ONCE(bits_missing, "CR4 bits went missing: %lx!?\n",
-			  bits_missing);
-	}
+	// if (static_branch_likely(&cr_pinning)) {
+	// 	if (unlikely((val & cr4_pinned_bits) != cr4_pinned_bits)) {
+	// 		bits_missing = ~val & cr4_pinned_bits;
+	// 		val |= bits_missing;
+	// 		goto set_register;
+	// 	}
+	// 	/* Warn after we've set the missing bits. */
+	// 	WARN_ONCE(bits_missing, "CR4 bits went missing: %lx!?\n",
+	// 		  bits_missing);
+	// }
 }
 EXPORT_SYMBOL(native_write_cr4);
 
