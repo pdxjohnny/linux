@@ -68,6 +68,7 @@
 #include <asm/mshyperv.h>
 #include <asm/hypervisor.h>
 #include <asm/intel_pt.h>
+#include <asm/msr.h>
 #include <clocksource/hyperv_timer.h>
 
 #define CREATE_TRACE_POINTS
@@ -7222,6 +7223,12 @@ int kvm_emulate_hypercall(struct kvm_vcpu *vcpu)
 {
 	unsigned long nr, a0, a1, a2, a3, ret;
 	int op_64_bit;
+	int err;
+	struct msr_data vmx_cr4_fixed0 = {
+		.host_initiated = true,
+		.index = MSR_IA32_VMX_CR4_FIXED0,
+		.data = 0x0,
+	};
 
 	if (kvm_hv_hypercall_enabled(vcpu->kvm))
 		return kvm_hv_hypercall(vcpu);
@@ -7268,6 +7275,37 @@ int kvm_emulate_hypercall(struct kvm_vcpu *vcpu)
 	case KVM_HC_SCHED_YIELD:
 		kvm_sched_yield(vcpu->kvm, a0);
 		ret = 0;
+		break;
+	case KVM_HC_CR4_MASK:
+		ret = 0;
+
+		printk("PRE: kvm_x86_ops->get_msr(vcpu, &vmx_cr4_fixed0): First Time\n");
+
+		if (kvm_x86_ops->get_msr(vcpu, &vmx_cr4_fixed0) != 0) {
+			printk("FAILED: kvm_x86_ops->get_msr(vcpu, &vmx_cr4_fixed0): First Time\n");
+			ret = 1;
+			break;
+		}
+		printk("READ MSR_IA32_VMX_CR4_FIXED0: %zx\n", vmx_cr4_fixed0.data);
+
+		vmx_cr4_fixed0.data &= ~(X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_UMIP);
+		printk("WILL WRITE MSR_IA32_VMX_CR4_FIXED0: %zx\n", vmx_cr4_fixed0.data);
+
+		printk("PRE: kvm_x86_ops->set_msr(vcpu, &vmx_cr4_fixed0)\n");
+		if (kvm_x86_ops->set_msr(vcpu, &vmx_cr4_fixed0) != 0) {
+			printk("FAILED: kvm_x86_ops->set_msr(vcpu, &vmx_cr4_fixed0)\n");
+			ret = 1;
+			break;
+		}
+
+		printk("PRE: kvm_x86_ops->get_msr(vcpu, &vmx_cr4_fixed0): Second Time\n");
+		if (kvm_x86_ops->get_msr(vcpu, &vmx_cr4_fixed0) != 0) {
+			printk("FAILED: kvm_x86_ops->get_msr(vcpu, &vmx_cr4_fixed0): Second Time\n");
+			ret = 1;
+			break;
+		}
+		printk("WROTE MSR_IA32_VMX_CR4_FIXED0: %zx\n", vmx_cr4_fixed0.data);
+
 		break;
 	default:
 		ret = -KVM_ENOSYS;

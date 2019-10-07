@@ -1,6 +1,8 @@
 Linux kernel
 ============
 
+Protecting CR4 Notes: https://docs.google.com/document/d/1ZBPAmze2GoWNe5fdmm24jmz3U19qVxvPK5dP0_MSMgE/edit?usp=sharing
+
 There are several guides for kernel developers and users. These guides can
 be rendered in a number of formats, like HTML and PDF. Please read
 Documentation/admin-guide/README.rst first.
