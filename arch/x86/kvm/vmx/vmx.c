@@ -1640,6 +1640,7 @@ static u64 vmx_write_l1_tsc_offset(struct kvm_vcpu *vcpu, u64 offset)
  */
 bool nested_vmx_allowed(struct kvm_vcpu *vcpu)
 {
+	printk("nested: %d\n", nested);
 	return nested && guest_cpuid_has(vcpu, X86_FEATURE_VMX);
 }
 
@@ -1724,8 +1725,11 @@ static int vmx_get_msr(struct kvm_vcpu *vcpu, struct msr_data *msr_info)
 		msr_info->data = vmx->msr_ia32_feature_control;
 		break;
 	case MSR_IA32_VMX_BASIC ... MSR_IA32_VMX_VMFUNC:
-		if (!nested_vmx_allowed(vcpu))
+		if (!nested_vmx_allowed(vcpu)) {
+			printk("nested_vmx_allowed(vcpu): false\n");
 			return 1;
+		}
+		printk("nested_vmx_allowed(vcpu): true\n");
 		return vmx_get_vmx_msr(&vmx->nested.msrs, msr_info->index,
 				       &msr_info->data);
 	case MSR_IA32_XSS:
