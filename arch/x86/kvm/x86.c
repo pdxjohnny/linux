@@ -7279,10 +7279,10 @@ int kvm_emulate_hypercall(struct kvm_vcpu *vcpu)
 	case KVM_HC_CR4_MASK:
 		ret = 0;
 
-		printk("PRE: kvm_x86_ops->get_msr(vcpu, &vmx_cr4_fixed0): First Time\n");
+		printk("PRE: kvm_get_msr(vcpu, &vmx_cr4_fixed0): First Time\n");
 
-		if (kvm_x86_ops->get_msr(vcpu, &vmx_cr4_fixed0) != 0) {
-			printk("FAILED: kvm_x86_ops->get_msr(vcpu, &vmx_cr4_fixed0): First Time\n");
+		if (kvm_get_msr(vcpu, &vmx_cr4_fixed0) != 0) {
+			printk("FAILED: kvm_get_msr(vcpu, &vmx_cr4_fixed0): First Time\n");
 			ret = 1;
 			break;
 		}
@@ -7291,16 +7291,16 @@ int kvm_emulate_hypercall(struct kvm_vcpu *vcpu)
 		vmx_cr4_fixed0.data &= ~(X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_UMIP);
 		printk("WILL WRITE MSR_IA32_VMX_CR4_FIXED0: %zx\n", vmx_cr4_fixed0.data);
 
-		printk("PRE: kvm_x86_ops->set_msr(vcpu, &vmx_cr4_fixed0)\n");
-		if (kvm_x86_ops->set_msr(vcpu, &vmx_cr4_fixed0) != 0) {
-			printk("FAILED: kvm_x86_ops->set_msr(vcpu, &vmx_cr4_fixed0)\n");
+		printk("PRE: kvm_set_msr(vcpu, &vmx_cr4_fixed0)\n");
+		if (kvm_set_msr(vcpu, &vmx_cr4_fixed0) != 0) {
+			printk("FAILED: kvm_set_msr(vcpu, &vmx_cr4_fixed0)\n");
 			ret = 1;
 			break;
 		}
 
-		printk("PRE: kvm_x86_ops->get_msr(vcpu, &vmx_cr4_fixed0): Second Time\n");
-		if (kvm_x86_ops->get_msr(vcpu, &vmx_cr4_fixed0) != 0) {
-			printk("FAILED: kvm_x86_ops->get_msr(vcpu, &vmx_cr4_fixed0): Second Time\n");
+		printk("PRE: kvm_get_msr(vcpu, &vmx_cr4_fixed0): Second Time\n");
+		if (kvm_get_msr(vcpu, &vmx_cr4_fixed0) != 0) {
+			printk("FAILED: kvm_get_msr(vcpu, &vmx_cr4_fixed0): Second Time\n");
 			ret = 1;
 			break;
 		}
