@@ -341,23 +341,33 @@ static void kvm_guest_cpu_init(void)
 		kvm_register_steal_time();
 
 	/*
-	 * If virutalized by KVM then make the hypercall telling KVM to do the
-	 * VT assisted pinning.
+	 * Test host logging of SMEP and SMAP being disabled.
 	 */
-	printk(pr_fmt("kvm_hypercall2(12, 4, 1): %ld\n"), kvm_hypercall2(12, 4, 1));
 
+	printk(pr_fmt("Enable\n"));
 	cr4 = native_read_cr4();
-
-	printk(pr_fmt("CR4 read: %lx\n"), cr4);
-
-	cr4 &= ~(X86_CR4_SMEP);
-
-	printk(pr_fmt("CR4 write: %lx\n"), cr4);
-
+	printk(pr_fmt("CR4 read     : %lx\n"), cr4);
+	cr4 |= (X86_CR4_SMEP | X86_CR4_SMAP);
+	printk(pr_fmt("CR4 write    : %lx\n"), cr4);
 	native_write_cr4(cr4);
-
 	cr4 = native_read_cr4();
+	printk(pr_fmt("CR4 read back: %lx\n"), cr4);
 
+	printk(pr_fmt("Disable\n"));
+	cr4 = native_read_cr4();
+	printk(pr_fmt("CR4 read     : %lx\n"), cr4);
+	cr4 &= ~(X86_CR4_SMEP | X86_CR4_SMAP);
+	printk(pr_fmt("CR4 write    : %lx\n"), cr4);
+	native_write_cr4(cr4);
+	cr4 = native_read_cr4();
+	printk(pr_fmt("CR4 read back: %lx\n"), cr4);
+
+	printk(pr_fmt("Re-enable\n"));
+	printk(pr_fmt("CR4 read     : %lx\n"), cr4);
+	cr4 |= (X86_CR4_SMEP | X86_CR4_SMAP);
+	printk(pr_fmt("CR4 write    : %lx\n"), cr4);
+	native_write_cr4(cr4);
+	cr4 = native_read_cr4();
 	printk(pr_fmt("CR4 read back: %lx\n"), cr4);
 }
 
