@@ -930,6 +930,20 @@ int kvm_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 	if (kvm_x86_ops->set_cr4(vcpu, cr4))
 		return 1;
 
+	// TODO Make this return 1 and run before set once we are sure this is a good idea
+	if (old_cr4 & X86_CR4_SMEP && !(cr4 & X86_CR4_SMEP)) {
+		printk("Guest disabled SMEP\n");
+		// printk("Guest attempted to disable SMEP\n");
+		// return 1;
+	}
+
+	if (old_cr4 & X86_CR4_SMAP && !(cr4 & X86_CR4_SMAP)) {
+		printk("Guest disabled SMAP\n");
+		// printk("Guest attempted to disable SMAP\n");
+		// return 1;
+	}
+
+
 	if (((cr4 ^ old_cr4) & pdptr_bits) ||
 	    (!(cr4 & X86_CR4_PCIDE) && (old_cr4 & X86_CR4_PCIDE)))
 		kvm_mmu_reset_context(vcpu);
