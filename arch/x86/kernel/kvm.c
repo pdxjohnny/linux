@@ -308,8 +308,6 @@ static notrace void kvm_guest_apic_eoi_write(u32 reg, u32 val)
 
 static void kvm_guest_cpu_init(void)
 {
-        unsigned long cr4;
-
 	if (kvm_para_has_feature(KVM_FEATURE_ASYNC_PF) && kvmapf) {
 		u64 pa = slow_virt_to_phys(this_cpu_ptr(&apf_reason));
 
@@ -337,10 +335,7 @@ static void kvm_guest_cpu_init(void)
 		wrmsrl(MSR_KVM_PV_EOI_EN, pa);
 	}
 
-	// TODO 
-	// if (kvm_para_has_feature(KVM_FEATURE_CR4_NO_DISABLE)) {
-	if (1) {
-		printk(pr_fmt("Protect: %lx\n"), (X86_CR4_SMEP | X86_CR4_SMAP));
+	if (kvm_para_has_feature(KVM_FEATURE_CR4_NO_DISABLE)) {
 		wrmsrl(MSR_KVM_CR4_NO_DISABLE, (X86_CR4_SMEP | X86_CR4_SMAP));
 	}
 
