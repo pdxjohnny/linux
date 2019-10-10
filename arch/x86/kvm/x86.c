@@ -929,8 +929,14 @@ int kvm_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 
 	/* Ensure guest can't disable any bits it told us it never wanted to
 	 * disable. */
-	if (~cr4 & vcpu->arch.msr_kvm_cr4_no_disable)
+	if (~cr4 & (old_cr4 & vcpu->arch.msr_kvm_cr4_no_disable)) {
+		printk("kvm: Guest attempted to disable cr4 bits!\n");
+		printk("kvm: old_cr4: %zx\n", old_cr4);
+		printk("kvm: cr4: %zx\n", cr4);
+		printk("kvm: ~cr4: %zx\n", ~cr4);
+		printk("kvm: old_cr4 & vcpu->arch.msr_kvm_cr4_no_disable: %zx\n", old_cr4 & vcpu->arch.msr_kvm_cr4_no_disable);
 		return 1;
+	}
 
 	if (kvm_x86_ops->set_cr4(vcpu, cr4))
 		return 1;
@@ -8950,6 +8956,8 @@ void kvm_arch_vcpu_postcreate(struct kvm_vcpu *vcpu)
 
 	/* poll control enabled by default */
 	vcpu->arch.msr_kvm_poll_control = 1;
+
+	vcpu->arch.msr_kvm_cr4_no_disable = 0;
 
 	mutex_unlock(&vcpu->mutex);
 
