@@ -884,6 +884,7 @@ int kvm_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 	unsigned long old_cr4 = kvm_read_cr4(vcpu);
 	unsigned long pdptr_bits = X86_CR4_PGE | X86_CR4_PSE | X86_CR4_PAE |
 				   X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_PKE;
+	unsigned long bits_missing = 0;
 
 	if (cr4 & CR4_RESERVED_BITS)
 		return 1;
@@ -929,12 +930,10 @@ int kvm_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 
 	/* Ensure guest can't disable any bits it told us it never wanted to
 	 * disable. */
-	if (~cr4 & (old_cr4 & vcpu->arch.msr_kvm_cr4_no_disable)) {
-		printk("kvm: Guest attempted to disable cr4 bits!\n");
-		printk("kvm: old_cr4: %zx\n", old_cr4);
-		printk("kvm: cr4: %zx\n", cr4);
-		printk("kvm: ~cr4: %zx\n", ~cr4);
-		printk("kvm: old_cr4 & vcpu->arch.msr_kvm_cr4_no_disable: %zx\n", old_cr4 & vcpu->arch.msr_kvm_cr4_no_disable);
+	bits_missing = ~cr4 & (old_cr4 & vcpu->arch.msr_kvm_cr4_no_disable);
+	if (bits_missing) {
+		printk(KERN_WARNING "kvm: Guest attempted to disable cr4 bits: %lx!?\n",
+			bits_missing);
 		return 1;
 	}
 
