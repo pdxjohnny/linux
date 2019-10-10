@@ -337,50 +337,15 @@ static void kvm_guest_cpu_init(void)
 		wrmsrl(MSR_KVM_PV_EOI_EN, pa);
 	}
 
+	// TODO 
+	// if (kvm_para_has_feature(KVM_FEATURE_CR4_NO_DISABLE)) {
+	if (1) {
+		printk(pr_fmt("Protect: %lx\n"), (X86_CR4_SMEP | X86_CR4_SMAP));
+		wrmsrl(MSR_KVM_CR4_NO_DISABLE, (X86_CR4_SMEP | X86_CR4_SMAP));
+	}
+
 	if (has_steal_clock)
 		kvm_register_steal_time();
-
-	/*
-	 * Test host logging of SMEP and SMAP being disabled.
-	 */
-
-	printk(pr_fmt("Enable\n"));
-	cr4 = native_read_cr4();
-	printk(pr_fmt("CR4 read     : %lx\n"), cr4);
-	cr4 |= (X86_CR4_SMEP | X86_CR4_SMAP);
-	printk(pr_fmt("CR4 write    : %lx\n"), cr4);
-	native_write_cr4(cr4);
-	cr4 = native_read_cr4();
-	printk(pr_fmt("CR4 read back: %lx\n"), cr4);
-
-	printk(pr_fmt("Disable\n"));
-	cr4 = native_read_cr4();
-	printk(pr_fmt("CR4 read     : %lx\n"), cr4);
-	cr4 &= ~(X86_CR4_SMEP | X86_CR4_SMAP);
-	printk(pr_fmt("CR4 write    : %lx\n"), cr4);
-	native_write_cr4(cr4);
-	cr4 = native_read_cr4();
-	printk(pr_fmt("CR4 read back: %lx\n"), cr4);
-
-	printk(pr_fmt("Re-enable\n"));
-	printk(pr_fmt("CR4 read     : %lx\n"), cr4);
-	cr4 |= (X86_CR4_SMEP | X86_CR4_SMAP);
-	printk(pr_fmt("CR4 write    : %lx\n"), cr4);
-	native_write_cr4(cr4);
-	cr4 = native_read_cr4();
-	printk(pr_fmt("CR4 read back: %lx\n"), cr4);
-
-	printk(pr_fmt("Protect      : %lx\n"), (X86_CR4_SMEP | X86_CR4_SMAP));
-	wrmsrl(MSR_KVM_CR4_NO_DISABLE, (X86_CR4_SMEP | X86_CR4_SMAP));
-
-	printk(pr_fmt("Try Disable\n"));
-	cr4 = native_read_cr4();
-	printk(pr_fmt("CR4 read     : %lx\n"), cr4);
-	cr4 &= ~(X86_CR4_SMEP | X86_CR4_SMAP);
-	printk(pr_fmt("CR4 write    : %lx\n"), cr4);
-	native_write_cr4(cr4);
-	cr4 = native_read_cr4();
-	printk(pr_fmt("CR4 read back: %lx\n"), cr4);
 }
 
 static void kvm_pv_disable_apf(void)
