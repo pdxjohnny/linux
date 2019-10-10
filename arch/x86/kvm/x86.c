@@ -927,22 +927,13 @@ int kvm_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 			return 1;
 	}
 
-	if (kvm_x86_ops->set_cr4(vcpu, cr4))
+	/* Ensure guest can't disable any bits it told us it never wanted to
+	 * disable. */
+	if (~cr4 & vcpu->arch.msr_kvm_cr4_no_disable)
 		return 1;
 
-	// TODO Make this return 1 and run before set once we are sure this is a good idea
-	if (old_cr4 & X86_CR4_SMEP && !(cr4 & X86_CR4_SMEP)) {
-		printk("Guest disabled SMEP\n");
-		// printk("Guest attempted to disable SMEP\n");
-		// return 1;
-	}
-
-	if (old_cr4 & X86_CR4_SMAP && !(cr4 & X86_CR4_SMAP)) {
-		printk("Guest disabled SMAP\n");
-		// printk("Guest attempted to disable SMAP\n");
-		// return 1;
-	}
-
+	if (kvm_x86_ops->set_cr4(vcpu, cr4))
+		return 1;
 
 	if (((cr4 ^ old_cr4) & pdptr_bits) ||
 	    (!(cr4 & X86_CR4_PCIDE) && (old_cr4 & X86_CR4_PCIDE)))
@@ -2671,6 +2662,11 @@ int kvm_set_msr_common(struct kvm_vcpu *vcpu, struct msr_data *msr_info)
 			return 1;
 
 		vcpu->arch.msr_kvm_poll_control = data;
+		break;
+
+	case MSR_KVM_CR4_NO_DISABLE:
+		/* guest cpu requests specified cr4 bits never be disabled */
+		vcpu->arch.msr_kvm_cr4_no_disable |= data;
 		break;
 
 	case MSR_IA32_MCG_CTL:
