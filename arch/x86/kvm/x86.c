@@ -745,6 +745,7 @@ int kvm_set_cr0(struct kvm_vcpu *vcpu, unsigned long cr0)
 {
 	unsigned long old_cr0 = kvm_read_cr0(vcpu);
 	unsigned long update_bits = X86_CR0_PG | X86_CR0_WP;
+	unsigned long bits_missing = 0;
 
 	cr0 |= X86_CR0_ET;
 
@@ -780,6 +781,15 @@ int kvm_set_cr0(struct kvm_vcpu *vcpu, unsigned long cr0)
 
 	if (!(cr0 & X86_CR0_PG) && kvm_read_cr4_bits(vcpu, X86_CR4_PCIDE))
 		return 1;
+
+	/* Ensure guest can't disable any bits it told us it never wanted to
+	 * disable. */
+	bits_missing = ~cr0 & (old_cr0 & vcpu->arch.msr_kvm_cr_pinning.cr0);
+	if (bits_missing) {
+		printk(KERN_WARNING "kvm: Guest attempted to disable cr0 bits: %lx!?\n",
+			bits_missing);
+		return 1;
+	}
 
 	kvm_x86_ops->set_cr0(vcpu, cr0);
 
@@ -930,7 +940,7 @@ int kvm_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 
 	/* Ensure guest can't disable any bits it told us it never wanted to
 	 * disable. */
-	bits_missing = ~cr4 & (old_cr4 & vcpu->arch.msr_kvm_cr4_no_disable);
+	bits_missing = ~cr4 & (old_cr4 & vcpu->arch.msr_kvm_cr_pinning.cr4);
 	if (bits_missing) {
 		printk(KERN_WARNING "kvm: Guest attempted to disable cr4 bits: %lx!?\n",
 			bits_missing);
@@ -2669,9 +2679,12 @@ int kvm_set_msr_common(struct kvm_vcpu *vcpu, struct msr_data *msr_info)
 		vcpu->arch.msr_kvm_poll_control = data;
 		break;
 
-	case MSR_KVM_CR4_NO_DISABLE:
-		/* guest cpu requests specified cr4 bits never be disabled */
-		vcpu->arch.msr_kvm_cr4_no_disable |= data;
+	case MSR_KVM_CR_PINNING:
+		/* guest cpu requests specified cr bits never be disabled */
+		if (data & KVM_CR0_PINNING)
+			vcpu->arch.msr_kvm_cr_pinning.cr0 |= data;
+		else if (data & KVM_CR4_PINNING)
+			vcpu->arch.msr_kvm_cr_pinning.cr4 |= data;
 		break;
 
 	case MSR_IA32_MCG_CTL:
@@ -8956,7 +8969,8 @@ void kvm_arch_vcpu_postcreate(struct kvm_vcpu *vcpu)
 	/* poll control enabled by default */
 	vcpu->arch.msr_kvm_poll_control = 1;
 
-	vcpu->arch.msr_kvm_cr4_no_disable = 0;
+	vcpu->arch.msr_kvm_cr_pinning.cr0 = 0;
+	vcpu->arch.msr_kvm_cr_pinning.cr4 = 0;
 
 	mutex_unlock(&vcpu->mutex);
 

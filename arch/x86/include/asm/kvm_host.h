@@ -758,7 +758,11 @@ struct kvm_vcpu_arch {
 	} pv_eoi;
 
 	u64 msr_kvm_poll_control;
-	u64 msr_kvm_cr4_no_disable;
+
+	struct {
+		u32 cr0;
+		u32 cr4;
+	} msr_kvm_cr_pinning;
 
 	/*
 	 * Indicate whether the access faults on its page table in guest
