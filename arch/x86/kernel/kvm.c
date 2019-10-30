@@ -335,9 +335,10 @@ static void kvm_guest_cpu_init(void)
 		wrmsrl(MSR_KVM_PV_EOI_EN, pa);
 	}
 
-	if (kvm_para_has_feature(KVM_FEATURE_CR4_NO_DISABLE)) {
-		wrmsrl(MSR_KVM_CR4_NO_DISABLE, (X86_CR4_SMEP | X86_CR4_SMAP));
-		printk(KERN_INFO"KVM setup cr4 no disable for cpu %d\n",
+	if (kvm_para_has_feature(KVM_FEATURE_CR_PINNING)) {
+		/* native_write_msr(MSR_KVM_CR_PINNING, KVM_CR0_PINNING, X86_CR0_WP); */
+		native_write_msr(MSR_KVM_CR_PINNING, KVM_CR4_PINNING, X86_CR4_SMEP | X86_CR4_SMAP);
+		printk(KERN_INFO"KVM setup cr pinning for cpu %d\n",
 		       smp_processor_id());
 	}
 
