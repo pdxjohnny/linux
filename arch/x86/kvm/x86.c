@@ -2682,9 +2682,9 @@ int kvm_set_msr_common(struct kvm_vcpu *vcpu, struct msr_data *msr_info)
 	case MSR_KVM_CR_PINNING:
 		/* guest cpu requests specified cr bits never be disabled */
 		if (data & KVM_CR0_PINNING)
-			vcpu->arch.msr_kvm_cr_pinning.cr0 |= data;
+			vcpu->arch.msr_kvm_cr_pinning.cr0 |= (u32)(data >> 32);
 		else if (data & KVM_CR4_PINNING)
-			vcpu->arch.msr_kvm_cr_pinning.cr4 |= data;
+			vcpu->arch.msr_kvm_cr_pinning.cr4 |= (u32)(data >> 32);
 		break;
 
 	case MSR_IA32_MCG_CTL:
