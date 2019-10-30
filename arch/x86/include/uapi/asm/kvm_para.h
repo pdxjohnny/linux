@@ -53,8 +53,10 @@
 #define MSR_KVM_POLL_CONTROL	0x4b564d05
 #define MSR_KVM_CR_PINNING	0x4b564d06
 
-#define KVM_CR0_PINNING             (1 << 32)
-#define KVM_CR4_PINNING             (1 << 33)
+#define KVM_CR0_PINNING_BIT    0
+#define KVM_CR0_PINNING                _BITUL(KVM_CR0_PINNING_BIT)
+#define KVM_CR4_PINNING_BIT    4
+#define KVM_CR4_PINNING                _BITUL(KVM_CR4_PINNING_BIT)
 
 struct kvm_steal_time {
 	__u64 steal;
