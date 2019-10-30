@@ -417,10 +417,22 @@ void __init mount_block_root(char *name, int flags)
 	cr4 = native_read_cr4();
 	printk(pr_fmt("CR4 read     : %lx\n"), cr4);
 	cr4 &= ~(X86_CR4_SMEP | X86_CR4_SMAP);
+	/*
 	printk(pr_fmt("CR4 write    : %lx\n"), cr4);
 	native_write_cr4(cr4);
 	cr4 = native_read_cr4();
 	printk(pr_fmt("CR4 read back: %lx\n"), cr4);
+	*/
+
+	unsigned long cr0;
+	printk(pr_fmt("Try Disable\n"));
+	cr0 = native_read_cr0();
+	printk(pr_fmt("CR0 read     : %lx\n"), cr0);
+	cr0 &= ~(X86_CR0_WP);
+	printk(pr_fmt("CR0 write    : %lx\n"), cr0);
+	native_write_cr0(cr0);
+	cr0 = native_read_cr0();
+	printk(pr_fmt("CR0 read back: %lx\n"), cr0);
 
 	get_fs_names(fs_names);
 retry:
