@@ -8969,7 +8969,7 @@ void kvm_arch_vcpu_postcreate(struct kvm_vcpu *vcpu)
 	/* poll control enabled by default */
 	vcpu->arch.msr_kvm_poll_control = 1;
 
-	memset(vcpu->arch.msr_kvm_cr_pinning, 0, sizeof(vcpu->arch.msr_kvm_cr_pinning));
+	memset(&(vcpu->arch.msr_kvm_cr_pinning), 0, sizeof(vcpu->arch.msr_kvm_cr_pinning));
 
 	mutex_unlock(&vcpu->mutex);
 
@@ -9061,7 +9061,7 @@ void kvm_vcpu_reset(struct kvm_vcpu *vcpu, bool init_event)
 
 	vcpu->arch.ia32_xss = 0;
 
-	memset(vcpu->arch.msr_kvm_cr_pinning, 0, sizeof(vcpu->arch.msr_kvm_cr_pinning));
+	memset(&(vcpu->arch.msr_kvm_cr_pinning), 0, sizeof(vcpu->arch.msr_kvm_cr_pinning));
 
 	kvm_x86_ops->vcpu_reset(vcpu, init_event);
 }
