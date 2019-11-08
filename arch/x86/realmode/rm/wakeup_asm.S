@@ -114,6 +114,7 @@ ENTRY(wakeup_start)
 	btl	$WAKEUP_BEHAVIOR_RESTORE_CR4, %edi
 	jnc	1f
 	movl	pmode_cr4, %eax
+	orl	$(X86_CR4_SMAP | X86_CR4_SMEP), %eax
 	movl	%eax, %cr4
 1:
 	btl	$WAKEUP_BEHAVIOR_RESTORE_EFER, %edi

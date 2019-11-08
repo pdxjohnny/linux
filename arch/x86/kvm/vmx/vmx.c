@@ -5881,6 +5881,7 @@ static int vmx_handle_exit(struct kvm_vcpu *vcpu)
 		}
 	}
 
+	printk("vmx: exit_reason: %d\n", exit_reason);
 	if (exit_reason < kvm_vmx_max_exit_handlers
 	    && kvm_vmx_exit_handlers[exit_reason])
 		return kvm_vmx_exit_handlers[exit_reason](vcpu);

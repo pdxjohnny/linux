@@ -217,6 +217,7 @@ identity_mapped:
 virtual_mapped:
 	movq	RSP(%r8), %rsp
 	movq	CR4(%r8), %rax
+	orq	$(X86_CR4_SMAP | X86_CR4_SMEP), %rax
 	movq	%rax, %cr4
 	movq	CR3(%r8), %rax
 	movq	CR0(%r8), %r8

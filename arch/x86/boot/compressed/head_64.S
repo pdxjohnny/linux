@@ -126,6 +126,7 @@ ENTRY(startup_32)
 
 	/* Enable PAE mode */
 	movl	%cr4, %eax
+	orl	$(X86_CR4_SMAP | X86_CR4_SMEP), %eax
 	orl	$X86_CR4_PAE, %eax
 	movl	%eax, %cr4
 
@@ -617,7 +618,7 @@ ENTRY(trampoline_32bit_src)
 	movl	$X86_CR4_PAE, %eax
 	cmpl	$0, %edx
 	jz	1f
-	orl	$X86_CR4_LA57, %eax
+	orl	$(X86_CR4_LA57 | X86_CR4_SMAP | X86_CR4_SMEP), %eax
 1:
 	movl	%eax, %cr4
 

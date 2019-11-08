@@ -786,6 +786,7 @@ int kvm_set_cr0(struct kvm_vcpu *vcpu, unsigned long cr0)
 	 * disable. */
 	bits_missing = ~cr0 & (old_cr0 & vcpu->arch.msr_kvm_cr_pinning.cr0);
 	if (bits_missing) {
+		dump_stack();
 		printk(KERN_WARNING "kvm: Guest attempted to disable cr0 bits: %lx!?\n",
 			bits_missing);
 		return 1;
@@ -942,6 +943,7 @@ int kvm_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 	 * disable. */
 	bits_missing = ~cr4 & (old_cr4 & vcpu->arch.msr_kvm_cr_pinning.cr4);
 	if (bits_missing) {
+		dump_stack();
 		printk(KERN_WARNING "kvm: Guest attempted to disable cr4 bits: %lx!?\n",
 			bits_missing);
 		return 1;
@@ -8679,6 +8681,8 @@ static int __set_sregs(struct kvm_vcpu *vcpu, struct kvm_sregs *sregs)
 	mmu_reset_needed |= kvm_read_cr4(vcpu) != sregs->cr4;
 	cpuid_update_needed |= ((kvm_read_cr4(vcpu) ^ sregs->cr4) &
 				(X86_CR4_OSXSAVE | X86_CR4_PKE));
+
+	printk("kvm: __set_sregs: sregs->cr4: %llx\n", sregs->cr4);
 	kvm_x86_ops->set_cr4(vcpu, sregs->cr4);
 	if (cpuid_update_needed)
 		kvm_update_cpuid(vcpu);

@@ -149,6 +149,7 @@ ENTRY(efi_enter32)
 	lgdtl	(%eax)
 
 	movl	%cr4, %eax
+	orl	$(X86_CR4_SMAP | X86_CR4_SMEP), %eax
 	btsl	$(X86_CR4_PAE_BIT), %eax
 	movl	%eax, %cr4
 

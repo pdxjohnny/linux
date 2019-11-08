@@ -121,8 +121,8 @@ ENTRY(secondary_startup_64)
 	addq	$(init_top_pgt - __START_KERNEL_map), %rax
 1:
 
-	/* Enable PAE mode, PGE and LA57 */
-	movl	$(X86_CR4_PAE | X86_CR4_PGE), %ecx
+	/* Enable PAE mode, PGE, SMAP, SMEP and LA57 */
+	movl	$(X86_CR4_PAE | X86_CR4_PGE | X86_CR4_SMAP | X86_CR4_SMEP), %ecx
 #ifdef CONFIG_X86_5LEVEL
 	testl	$1, __pgtable_l5_enabled(%rip)
 	jz	1f

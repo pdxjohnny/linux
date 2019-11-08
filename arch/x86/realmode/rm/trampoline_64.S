@@ -117,6 +117,7 @@ ENTRY(startup_32)
 .Ldone:
 
 	movl	pa_tr_cr4, %eax
+	orl	$(X86_CR4_SMAP | X86_CR4_SMEP), %eax
 	movl	%eax, %cr4		# Enable PAE mode
 
 	# Setup trampoline 4 level pagetables
