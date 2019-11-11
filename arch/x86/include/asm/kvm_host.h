@@ -760,9 +760,9 @@ struct kvm_vcpu_arch {
 	u64 msr_kvm_poll_control;
 
 	struct {
-		u32 cr0;
-		u32 cr4;
-	} msr_kvm_cr_pinning;
+		u32 cr0_pinning;
+		u32 cr4_pinning;
+	} harden;
 
 	/*
 	 * Indicate whether the access faults on its page table in guest

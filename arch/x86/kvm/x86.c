@@ -784,7 +784,7 @@ int kvm_set_cr0(struct kvm_vcpu *vcpu, unsigned long cr0)
 
 	/* Ensure guest can't disable any bits it told us it never wanted to
 	 * disable. */
-	bits_missing = ~cr0 & (old_cr0 & vcpu->arch.msr_kvm_cr_pinning.cr0);
+	bits_missing = ~cr0 & (old_cr0 & vcpu->arch.harden.cr0_pinning);
 	if (bits_missing) {
 		printk(KERN_WARNING "kvm: Guest attempted to disable cr0 bits: %lx!?\n",
 			bits_missing);
@@ -940,7 +940,7 @@ int kvm_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 
 	/* Ensure guest can't disable any bits it told us it never wanted to
 	 * disable. */
-	bits_missing = ~cr4 & (old_cr4 & vcpu->arch.msr_kvm_cr_pinning.cr4);
+	bits_missing = ~cr4 & (old_cr4 & vcpu->arch.harden.cr4_pinning);
 	if (bits_missing) {
 		printk(KERN_WARNING "kvm: Guest attempted to disable cr4 bits: %lx!?\n",
 			bits_missing);
@@ -2677,14 +2677,6 @@ int kvm_set_msr_common(struct kvm_vcpu *vcpu, struct msr_data *msr_info)
 			return 1;
 
 		vcpu->arch.msr_kvm_poll_control = data;
-		break;
-
-	case MSR_KVM_CR_PINNING:
-		/* guest cpu requests specified cr bits never be disabled */
-		if (data & KVM_CR0_PINNING)
-			vcpu->arch.msr_kvm_cr_pinning.cr0 |= (u32)(data >> 32);
-		else if (data & KVM_CR4_PINNING)
-			vcpu->arch.msr_kvm_cr_pinning.cr4 |= (u32)(data >> 32);
 		break;
 
 	case MSR_IA32_MCG_CTL:
@@ -7246,6 +7238,27 @@ static void kvm_sched_yield(struct kvm *kvm, unsigned long dest_id)
 		kvm_vcpu_yield_to(target);
 }
 
+static unsigned long kvm_harden(struct kvm_vcpu *vcpu, unsigned long config_select, unsigned long config)
+{
+	unsigned long ret;
+
+	switch (config_select) {
+	case KVM_HC_HARDEN_CR0_PINNING:
+		vcpu->arch.harden.cr0_pinning |= (u32)config;
+		ret = 0;
+		break;
+	case KVM_HC_HARDEN_CR4_PINNING:
+		vcpu->arch.harden.cr4_pinning |= (u32)config;
+		ret = 0;
+		break;
+	default:
+		ret = -KVM_EOPNOTSUPP;
+		break;
+	}
+
+	return ret;
+}
+
 int kvm_emulate_hypercall(struct kvm_vcpu *vcpu)
 {
 	unsigned long nr, a0, a1, a2, a3, ret;
@@ -7296,6 +7309,9 @@ int kvm_emulate_hypercall(struct kvm_vcpu *vcpu)
 	case KVM_HC_SCHED_YIELD:
 		kvm_sched_yield(vcpu->kvm, a0);
 		ret = 0;
+		break;
+	case KVM_HC_HARDEN:
+		ret = kvm_harden(vcpu, a0, a1);
 		break;
 	default:
 		ret = -KVM_ENOSYS;
@@ -8969,7 +8985,7 @@ void kvm_arch_vcpu_postcreate(struct kvm_vcpu *vcpu)
 	/* poll control enabled by default */
 	vcpu->arch.msr_kvm_poll_control = 1;
 
-	memset(&(vcpu->arch.msr_kvm_cr_pinning), 0, sizeof(vcpu->arch.msr_kvm_cr_pinning));
+	memset(&(vcpu->arch.harden), 0, sizeof(vcpu->arch.harden));
 
 	mutex_unlock(&vcpu->mutex);
 
@@ -9061,7 +9077,7 @@ void kvm_vcpu_reset(struct kvm_vcpu *vcpu, bool init_event)
 
 	vcpu->arch.ia32_xss = 0;
 
-	memset(&(vcpu->arch.msr_kvm_cr_pinning), 0, sizeof(vcpu->arch.msr_kvm_cr_pinning));
+	memset(&(vcpu->arch.harden), 0, sizeof(vcpu->arch.harden));
 
 	kvm_x86_ops->vcpu_reset(vcpu, init_event);
 }
