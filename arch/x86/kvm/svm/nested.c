@@ -583,8 +583,15 @@ int nested_svm_vmexit(struct vcpu_svm *svm)
 	svm->vmcb->save.idtr = hsave->save.idtr;
 	kvm_set_rflags(&svm->vcpu, hsave->save.rflags);
 	svm_set_efer(&svm->vcpu, hsave->save.efer);
-	svm_set_cr0(&svm->vcpu, hsave->save.cr0 | X86_CR0_PE);
-	svm_set_cr4(&svm->vcpu, hsave->save.cr4);
+	svm_set_cr0(&svm->vcpu,
+		    (hsave->save.cr0 |
+		    X86_CR0_PE |
+		    svm->vcpu.arch.cr0_pinned.high) &
+		    ~svm->vcpu.arch.cr0_pinned.low);
+	svm_set_cr4(&svm->vcpu,
+		    (hsave->save.cr4 |
+		    svm->vcpu.arch.cr4_pinned.high) &
+		    ~svm->vcpu.arch.cr4_pinned.low);
 	if (npt_enabled) {
 		svm->vmcb->save.cr3 = hsave->save.cr3;
 		svm->vcpu.arch.cr3 = hsave->save.cr3;
