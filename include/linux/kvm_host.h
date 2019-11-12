@@ -488,6 +488,11 @@ struct kvm {
 	struct hlist_head irq_ack_notifier_list;
 #endif
 
+	struct {
+		u32 cr0_pinning;
+		u32 cr4_pinning;
+	} harden;
+
 #if defined(CONFIG_MMU_NOTIFIER) && defined(KVM_ARCH_WANT_MMU_NOTIFIER)
 	struct mmu_notifier mmu_notifier;
 	unsigned long mmu_notifier_seq;

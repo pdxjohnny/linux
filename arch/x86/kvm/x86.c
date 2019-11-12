@@ -750,6 +750,7 @@ int kvm_set_cr0(struct kvm_vcpu *vcpu, unsigned long cr0)
 {
 	unsigned long old_cr0 = kvm_read_cr0(vcpu);
 	unsigned long update_bits = X86_CR0_PG | X86_CR0_WP;
+	unsigned long bits_missing = 0;
 
 	cr0 |= X86_CR0_ET;
 
@@ -765,6 +766,13 @@ int kvm_set_cr0(struct kvm_vcpu *vcpu, unsigned long cr0)
 
 	if ((cr0 & X86_CR0_PG) && !(cr0 & X86_CR0_PE))
 		return 1;
+
+	bits_missing = ~cr0 & old_cr0 & vcpu->kvm->harden.cr0_pinning;
+	if (bits_missing) {
+		pr_warn("kvm: Guest attempted to disable cr0 bits: %lx!?\n",
+			bits_missing);
+		return 1;
+	}
 
 	if (!is_paging(vcpu) && (cr0 & X86_CR0_PG)) {
 #ifdef CONFIG_X86_64
@@ -918,9 +926,17 @@ int kvm_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 	unsigned long old_cr4 = kvm_read_cr4(vcpu);
 	unsigned long pdptr_bits = X86_CR4_PGE | X86_CR4_PSE | X86_CR4_PAE |
 				   X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_PKE;
+	unsigned long bits_missing = 0;
 
 	if (kvm_valid_cr4(vcpu, cr4))
 		return 1;
+
+	bits_missing = ~cr4 & old_cr4 & vcpu->kvm->harden.cr4_pinning;
+	if (bits_missing) {
+		pr_warn("kvm: Guest attempted to disable cr4 bits: %lx!?\n",
+			bits_missing);
+		return 1;
+	}
 
 	if (is_long_mode(vcpu)) {
 		if (!(cr4 & X86_CR4_PAE))
@@ -7346,6 +7362,39 @@ static void kvm_sched_yield(struct kvm *kvm, unsigned long dest_id)
 		kvm_vcpu_yield_to(target);
 }
 
+static unsigned long kvm_harden(struct kvm_vcpu *vcpu,
+				unsigned long config_select,
+				unsigned long config)
+{
+	unsigned int i;
+	unsigned long ret;
+	struct kvm_vcpu *iter_vcpu;
+
+	switch (config_select) {
+	case KVM_HC_HARDEN_CR0_PINNING:
+		vcpu->kvm->harden.cr0_pinning |= (u32)config;
+		kvm_for_each_vcpu(i, iter_vcpu, vcpu->kvm) {
+			kvm_x86_ops->set_cr0_guest_owned_bits(iter_vcpu,
+					iter_vcpu->arch.cr0_guest_owned_bits & ~config);
+		}
+		ret = 0;
+		break;
+	case KVM_HC_HARDEN_CR4_PINNING:
+		vcpu->kvm->harden.cr4_pinning |= (u32)config;
+		kvm_for_each_vcpu(i, iter_vcpu, vcpu->kvm) {
+			kvm_x86_ops->set_cr4_guest_owned_bits(iter_vcpu,
+					iter_vcpu->arch.cr4_guest_owned_bits & ~config);
+		}
+		ret = 0;
+		break;
+	default:
+		ret = -KVM_EOPNOTSUPP;
+		break;
+	}
+
+	return ret;
+}
+
 int kvm_emulate_hypercall(struct kvm_vcpu *vcpu)
 {
 	unsigned long nr, a0, a1, a2, a3, ret;
@@ -7396,6 +7445,9 @@ int kvm_emulate_hypercall(struct kvm_vcpu *vcpu)
 	case KVM_HC_SCHED_YIELD:
 		kvm_sched_yield(vcpu->kvm, a0);
 		ret = 0;
+		break;
+	case KVM_HC_HARDEN:
+		ret = kvm_harden(vcpu, a0, a1);
 		break;
 	default:
 		ret = -KVM_ENOSYS;
@@ -8746,8 +8798,11 @@ static int __set_sregs(struct kvm_vcpu *vcpu, struct kvm_sregs *sregs)
 	int mmu_reset_needed = 0;
 	int cpuid_update_needed = 0;
 	int pending_vec, max_bits, idx;
+	unsigned int i;
+	struct kvm_vcpu *iter_vcpu;
 	struct desc_ptr dt;
 	int ret = -EINVAL;
+
 
 	if (kvm_valid_sregs(vcpu, sregs))
 		goto out;
@@ -8774,9 +8829,21 @@ static int __set_sregs(struct kvm_vcpu *vcpu, struct kvm_sregs *sregs)
 	mmu_reset_needed |= vcpu->arch.efer != sregs->efer;
 	kvm_x86_ops->set_efer(vcpu, sregs->efer);
 
+	vcpu->kvm->harden.cr0_pinning &= sregs->cr0;
+	kvm_for_each_vcpu(i, iter_vcpu, vcpu->kvm) {
+		kvm_x86_ops->set_cr0_guest_owned_bits(iter_vcpu,
+				iter_vcpu->arch.cr0_guest_owned_bits & ~vcpu->kvm->harden.cr0_pinning);
+	}
+
 	mmu_reset_needed |= kvm_read_cr0(vcpu) != sregs->cr0;
 	kvm_x86_ops->set_cr0(vcpu, sregs->cr0);
 	vcpu->arch.cr0 = sregs->cr0;
+
+	vcpu->kvm->harden.cr4_pinning &= sregs->cr4;
+	kvm_for_each_vcpu(i, iter_vcpu, vcpu->kvm) {
+		kvm_x86_ops->set_cr4_guest_owned_bits(iter_vcpu,
+				iter_vcpu->arch.cr4_guest_owned_bits & ~vcpu->kvm->harden.cr4_pinning);
+	}
 
 	mmu_reset_needed |= kvm_read_cr4(vcpu) != sregs->cr4;
 	cpuid_update_needed |= ((kvm_read_cr4(vcpu) ^ sregs->cr4) &
