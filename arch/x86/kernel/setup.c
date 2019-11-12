@@ -27,6 +27,9 @@
 #include <asm/apic.h>
 #include <asm/bios_ebda.h>
 #include <asm/bugs.h>
+#include <asm/kasan.h>
+#include <asm/cmdline.h>
+
 #include <asm/cpu.h>
 #include <asm/efi.h>
 #include <asm/gart.h>
