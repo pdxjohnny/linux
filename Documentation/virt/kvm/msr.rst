@@ -376,3 +376,62 @@ data:
 	write '1' to bit 0 of the MSR, this causes the host to re-scan its queue
 	and check if there are more notifications pending. The MSR is available
 	if KVM_FEATURE_ASYNC_PF_INT is present in CPUID.
+
+MSR_KVM_CR0_PIN_ALLOWED:
+	0x4b564d08
+MSR_KVM_CR4_PIN_ALLOWED:
+	0x4b564d09
+
+	Registers informing the guest which bits may be pinned for each control
+	register respectively via the CR pinned MSRs. Read only for the guest.
+	Host VMM may modify which bits are allowed by writing to these
+	registers.
+
+data:
+	Bits which may be pinned.
+
+	Attempting to pin bits other than these will result in a failure when
+	writing to the respective CR pinned MSR.
+
+	Bits which are allowed to be pinned default to WP for CR0 and SMEP,
+	SMAP, and UMIP for CR4.
+
+        The host VMM may modify the set of allowed bits. However, only the above
+        have been tested to work. Allowing the guest to pin other bits may or
+        may not be compatible with KVM.
+
+MSR_KVM_CR0_PINNED_LOW:
+	0x4b564d0a
+MSR_KVM_CR0_PINNED_HIGH:
+	0x4b564d0b
+MSR_KVM_CR4_PINNED_LOW:
+	0x4b564d0c
+MSR_KVM_CR4_PINNED_HIGH:
+	0x4b564d0d
+
+	Used to configure pinned bits in control registers
+
+data:
+	Bits to be pinned.
+
+	Fails if data contains bits which are not allowed to be pinned. Or if
+	attempting to pin bits high that are already pinned low, or vice versa.
+	Bits which are allowed to be pinned can be found by reading the CR pin
+	allowed MSRs.
+
+	The MSRs are read/write for host userspace, and write-only for the
+	guest.
+
+	Once set to a non-zero value, the guest cannot clear any of the bits
+	that have been pinned. The guest can pin more bits, so long as those
+	bits appear in the allowed MSR, and are not already pinned to the
+	opposite value.
+
+	Host userspace may clear or change pinned bits at any point. Host
+	userspace must clear pinned bits on reboot.
+
+	The MSR enables bit pinning for control registers. Pinning is active
+	when the guest is not in SMM. If an exit from SMM results in pinned
+	bits becoming unpinned. The guest will exit. If the guest attempts to
+	write values to cr* where bits differ from pinned bits, the write will
+	fail and the guest will be sent a general protection fault.
