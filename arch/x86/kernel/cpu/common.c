@@ -20,6 +20,7 @@
 #include <linux/smp.h>
 #include <linux/io.h>
 #include <linux/syscore_ops.h>
+#include <linux/kvm_para.h>
 
 #include <asm/stackprotector.h>
 #include <asm/perf_event.h>
@@ -423,6 +424,23 @@ void cr4_init(void)
 	this_cpu_write(cpu_tlbstate.cr4, cr4);
 }
 
+static void setup_paravirt_cr_pinning(void)
+{
+#ifdef CONFIG_PARAVIRT_HARDEN_CR_PINNING
+	if (kvm_para_has_feature(KVM_FEATURE_HARDEN)) {
+		if (!kvm_hypercall2(KVM_HC_HARDEN, KVM_HC_HARDEN_CR0_PINNING,
+				    X86_CR0_WP))
+			pr_info("Setup paravirtualized cr0 pinning for cpu %d\n",
+				smp_processor_id());
+
+		if (!kvm_hypercall2(KVM_HC_HARDEN, KVM_HC_HARDEN_CR4_PINNING,
+				    cr4_pinned_bits))
+			pr_info("Setup paravirtualized cr4 pinning for cpu %d\n",
+				smp_processor_id());
+	}
+#endif
+}
+
 /*
  * Once CPU feature detection is finished (and boot params have been
  * parsed), record any of the sensitive CR bits that are set, and
@@ -435,6 +453,8 @@ static void __init setup_cr_pinning(void)
 	mask = (X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_UMIP);
 	cr4_pinned_bits = this_cpu_read(cpu_tlbstate.cr4) & mask;
 	static_key_enable(&cr_pinning.key);
+
+	setup_paravirt_cr_pinning();
 }
 
 /*
