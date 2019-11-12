@@ -232,7 +232,7 @@ struct x86_emulate_ops {
 	void (*set_hflags)(struct x86_emulate_ctxt *ctxt, unsigned hflags);
 	int (*pre_leave_smm)(struct x86_emulate_ctxt *ctxt,
 			     const char *smstate);
-	void (*post_leave_smm)(struct x86_emulate_ctxt *ctxt);
+	int (*post_leave_smm)(struct x86_emulate_ctxt *ctxt);
 	int (*set_xcr)(struct x86_emulate_ctxt *ctxt, u32 index, u64 xcr);
 };
 
