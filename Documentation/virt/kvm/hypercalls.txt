@@ -152,3 +152,32 @@ a0: destination APIC ID
 
 Usage example: When sending a call-function IPI-many to vCPUs, yield if
 any of the IPI target vCPUs was preempted.
+
+12. KVM_HC_HARDEN
+------------------------
+Architecture: x86
+Status: active
+Purpose: Hypercall used to configure kernel hardening features.
+Usage:
+
+a0: One of the KVM_HC_HARDEN_XXXXXX integer values used to inform
+the host how it should interpret a1.
+
+a1: Value depends on a0
+
+	KVM_HC_HARDEN_CR0_PINNING:
+	KVM_HC_HARDEN_CR4_PINNING:
+		__u32 bits_to_pin
+
+		Bits which if the guest ever attempts to set to 0 in their
+		respective registers, trigger a general protection fault.
+
+The hypercall lets a guest enable kernel hardening features. Instructing the
+host to enforce guest specified restrictions upon the guest. These
+restrictions cannot be revoked for the lifetime of the guest. This is to
+prevent attackers from disabling them before executing an attack they may
+prevent.
+
+Returns KVM_EOPNOTSUPP if the host does not support a0.
+
+Returns KVM_EINVAL if a1 is incorrect for a0.
