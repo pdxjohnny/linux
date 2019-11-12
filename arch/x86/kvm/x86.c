@@ -792,6 +792,11 @@ int kvm_set_cr0(struct kvm_vcpu *vcpu, unsigned long cr0)
 	if ((cr0 & X86_CR0_PG) && !(cr0 & X86_CR0_PE))
 		return 1;
 
+	if (!is_smm(vcpu) && !is_guest_mode(vcpu) &&
+	    (((cr0 ^ vcpu->arch.cr0_pinned.high) & vcpu->arch.cr0_pinned.high) ||
+	    ((~cr0 ^ vcpu->arch.cr0_pinned.low) & vcpu->arch.cr0_pinned.low)))
+		return 1;
+
 	if (!is_paging(vcpu) && (cr0 & X86_CR0_PG)) {
 #ifdef CONFIG_X86_64
 		if ((vcpu->arch.efer & EFER_LME)) {
@@ -970,6 +975,11 @@ int kvm_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 				   X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_PKE;
 
 	if (kvm_valid_cr4(vcpu, cr4))
+		return 1;
+
+	if (!is_smm(vcpu) && !is_guest_mode(vcpu) &&
+	    (((cr4 ^ vcpu->arch.cr4_pinned.high) & vcpu->arch.cr4_pinned.high) ||
+	    ((~cr4 ^ vcpu->arch.cr4_pinned.low) & vcpu->arch.cr4_pinned.low)))
 		return 1;
 
 	if (is_long_mode(vcpu)) {
@@ -1291,6 +1301,12 @@ static const u32 emulated_msrs_all[] = {
 
 	MSR_K7_HWCR,
 	MSR_KVM_POLL_CONTROL,
+	MSR_KVM_CR0_PIN_ALLOWED,
+	MSR_KVM_CR4_PIN_ALLOWED,
+	MSR_KVM_CR0_PINNED_LOW,
+	MSR_KVM_CR0_PINNED_HIGH,
+	MSR_KVM_CR4_PINNED_LOW,
+	MSR_KVM_CR4_PINNED_HIGH,
 };
 
 static u32 emulated_msrs[ARRAY_SIZE(emulated_msrs_all)];
@@ -2986,6 +3002,60 @@ int kvm_set_msr_common(struct kvm_vcpu *vcpu, struct msr_data *msr_info)
 		vcpu->arch.msr_kvm_poll_control = data;
 		break;
 
+	case MSR_KVM_CR0_PIN_ALLOWED:
+		if (msr_info->host_initiated)
+			vcpu->arch.cr0_pinned.allowed = data;
+
+		return (data != vcpu->arch.cr0_pinned.allowed);
+	case MSR_KVM_CR4_PIN_ALLOWED:
+		if (msr_info->host_initiated)
+			vcpu->arch.cr4_pinned.allowed = data;
+
+		return (data != vcpu->arch.cr4_pinned.allowed);
+	case MSR_KVM_CR0_PINNED_LOW:
+		if ((data & ~vcpu->arch.cr0_pinned.allowed) ||
+		    (data & vcpu->arch.cr0_pinned.high))
+			return 1;
+
+		if (!msr_info->host_initiated &&
+		    (~data & vcpu->arch.cr0_pinned.low))
+			return 1;
+
+		vcpu->arch.cr0_pinned.low = data;
+		break;
+	case MSR_KVM_CR0_PINNED_HIGH:
+		if ((data & ~vcpu->arch.cr0_pinned.allowed) ||
+		    (data & vcpu->arch.cr0_pinned.low))
+			return 1;
+
+		if (!msr_info->host_initiated &&
+		    (~data & vcpu->arch.cr0_pinned.high))
+			return 1;
+
+		vcpu->arch.cr0_pinned.high = data;
+		break;
+	case MSR_KVM_CR4_PINNED_LOW:
+		if ((data & ~vcpu->arch.cr4_pinned.allowed) ||
+		    (data & vcpu->arch.cr4_pinned.high))
+			return 1;
+
+		if (!msr_info->host_initiated &&
+		    (~data & vcpu->arch.cr4_pinned.low))
+			return 1;
+
+		vcpu->arch.cr4_pinned.low = data;
+		break;
+	case MSR_KVM_CR4_PINNED_HIGH:
+		if ((data & ~vcpu->arch.cr4_pinned.allowed) ||
+		    (data & vcpu->arch.cr4_pinned.low))
+			return 1;
+
+		if (!msr_info->host_initiated &&
+		    (~data & vcpu->arch.cr4_pinned.high))
+			return 1;
+
+		vcpu->arch.cr4_pinned.high = data;
+		break;
 	case MSR_IA32_MCG_CTL:
 	case MSR_IA32_MCG_STATUS:
 	case MSR_IA32_MC0_CTL ... MSR_IA32_MCx_CTL(KVM_MAX_MCE_BANKS) - 1:
@@ -3249,6 +3319,24 @@ int kvm_get_msr_common(struct kvm_vcpu *vcpu, struct msr_data *msr_info)
 		break;
 	case MSR_KVM_POLL_CONTROL:
 		msr_info->data = vcpu->arch.msr_kvm_poll_control;
+		break;
+	case MSR_KVM_CR0_PIN_ALLOWED:
+		msr_info->data = vcpu->arch.cr0_pinned.allowed;
+		break;
+	case MSR_KVM_CR4_PIN_ALLOWED:
+		msr_info->data = vcpu->arch.cr4_pinned.allowed;
+		break;
+	case MSR_KVM_CR0_PINNED_LOW:
+		msr_info->data = vcpu->arch.cr0_pinned.low;
+		break;
+	case MSR_KVM_CR0_PINNED_HIGH:
+		msr_info->data = vcpu->arch.cr0_pinned.high;
+		break;
+	case MSR_KVM_CR4_PINNED_LOW:
+		msr_info->data = vcpu->arch.cr4_pinned.low;
+		break;
+	case MSR_KVM_CR4_PINNED_HIGH:
+		msr_info->data = vcpu->arch.cr4_pinned.high;
 		break;
 	case MSR_IA32_P5_MC_ADDR:
 	case MSR_IA32_P5_MC_TYPE:
@@ -6414,9 +6502,23 @@ static int emulator_pre_leave_smm(struct x86_emulate_ctxt *ctxt,
 	return kvm_x86_ops.pre_leave_smm(emul_to_vcpu(ctxt), smstate);
 }
 
-static void emulator_post_leave_smm(struct x86_emulate_ctxt *ctxt)
+static int emulator_post_leave_smm(struct x86_emulate_ctxt *ctxt)
 {
-	kvm_smm_changed(emul_to_vcpu(ctxt));
+	struct kvm_vcpu *vcpu = emul_to_vcpu(ctxt);
+	unsigned long cr0 = kvm_read_cr0(vcpu);
+	unsigned long cr4 = kvm_read_cr4(vcpu);
+
+	if (((cr0 ^ vcpu->arch.cr0_pinned.high) & vcpu->arch.cr0_pinned.high) ||
+	    ((~cr0 ^ vcpu->arch.cr0_pinned.low) & vcpu->arch.cr0_pinned.low))
+		return 1;
+
+	if (((cr4 ^ vcpu->arch.cr4_pinned.high) & vcpu->arch.cr4_pinned.high) ||
+	    ((~cr4 ^ vcpu->arch.cr4_pinned.low) & vcpu->arch.cr4_pinned.low))
+		return 1;
+
+	kvm_smm_changed(vcpu);
+
+	return 0;
 }
 
 static int emulator_set_xcr(struct x86_emulate_ctxt *ctxt, u32 index, u64 xcr)
@@ -9571,6 +9673,9 @@ void kvm_arch_vcpu_destroy(struct kvm_vcpu *vcpu)
 		static_key_slow_dec(&kvm_no_apic_vcpu);
 }
 
+#define KVM_CR0_PIN_ALLOWED	(X86_CR0_WP)
+#define KVM_CR4_PIN_ALLOWED	(X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_UMIP)
+
 void kvm_vcpu_reset(struct kvm_vcpu *vcpu, bool init_event)
 {
 	kvm_lapic_reset(vcpu, init_event);
@@ -9639,6 +9744,11 @@ void kvm_vcpu_reset(struct kvm_vcpu *vcpu, bool init_event)
 	vcpu->arch.regs_dirty = ~0;
 
 	vcpu->arch.ia32_xss = 0;
+
+	memset(&vcpu->arch.cr0_pinned, 0, sizeof(vcpu->arch.cr0_pinned));
+	vcpu->arch.cr0_pinned.allowed = KVM_CR0_PIN_ALLOWED;
+	memset(&vcpu->arch.cr4_pinned, 0, sizeof(vcpu->arch.cr4_pinned));
+	vcpu->arch.cr4_pinned.allowed = KVM_CR4_PIN_ALLOWED;
 
 	kvm_x86_ops.vcpu_reset(vcpu, init_event);
 }
