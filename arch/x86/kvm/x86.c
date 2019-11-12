@@ -767,6 +767,9 @@ int kvm_set_cr0(struct kvm_vcpu *vcpu, unsigned long cr0)
 	if ((cr0 & X86_CR0_PG) && !(cr0 & X86_CR0_PE))
 		return 1;
 
+	if (!is_smm(vcpu) && (cr0 ^ old_cr0) & vcpu->arch.cr0_pinned)
+		return 1;
+
 	if (!is_paging(vcpu) && (cr0 & X86_CR0_PG)) {
 #ifdef CONFIG_X86_64
 		if ((vcpu->arch.efer & EFER_LME)) {
@@ -921,6 +924,9 @@ int kvm_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 				   X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_PKE;
 
 	if (kvm_valid_cr4(vcpu, cr4))
+		return 1;
+
+	if (!is_smm(vcpu) && (cr4 ^ old_cr4) & vcpu->arch.cr4_pinned)
 		return 1;
 
 	if (is_long_mode(vcpu)) {
@@ -1241,6 +1247,8 @@ static const u32 emulated_msrs_all[] = {
 
 	MSR_K7_HWCR,
 	MSR_KVM_POLL_CONTROL,
+	MSR_KVM_CR0_PIN_ALLOWED,
+	MSR_KVM_CR4_PIN_ALLOWED,
 };
 
 static u32 emulated_msrs[ARRAY_SIZE(emulated_msrs_all)];
@@ -2921,6 +2929,9 @@ static int get_msr_mce(struct kvm_vcpu *vcpu, u32 msr, u64 *pdata, bool host)
 	return 0;
 }
 
+#define KVM_CR0_PIN_ALLOWED	(X86_CR0_WP)
+#define KVM_CR4_PIN_ALLOWED	(X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_UMIP)
+
 int kvm_get_msr_common(struct kvm_vcpu *vcpu, struct msr_data *msr_info)
 {
 	switch (msr_info->index) {
@@ -3039,6 +3050,12 @@ int kvm_get_msr_common(struct kvm_vcpu *vcpu, struct msr_data *msr_info)
 		break;
 	case MSR_KVM_POLL_CONTROL:
 		msr_info->data = vcpu->arch.msr_kvm_poll_control;
+		break;
+	case MSR_KVM_CR0_PIN_ALLOWED:
+		msr_info->data = KVM_CR0_PIN_ALLOWED;
+		break;
+	case MSR_KVM_CR4_PIN_ALLOWED:
+		msr_info->data = KVM_CR4_PIN_ALLOWED;
 		break;
 	case MSR_IA32_P5_MC_ADDR:
 	case MSR_IA32_P5_MC_TYPE:
@@ -7374,6 +7391,44 @@ static void kvm_sched_yield(struct kvm *kvm, unsigned long dest_id)
 		kvm_vcpu_yield_to(target);
 }
 
+static unsigned long kvm_pin_cr_bits(struct kvm_vcpu *vcpu,
+				     unsigned long cr,
+				     unsigned long pin)
+{
+	unsigned long ret;
+
+	if (!pin)
+		return -KVM_EINVAL;
+
+	switch (cr) {
+	case 0:
+		if (vcpu->arch.cr0_pinned || (pin & ~KVM_CR0_PIN_ALLOWED)) {
+			ret = -KVM_EINVAL;
+			break;
+		}
+		vcpu->arch.cr0_pinned = pin;
+		kvm_x86_ops->set_cr0_guest_owned_bits(vcpu,
+				vcpu->arch.cr0_guest_owned_bits & ~pin);
+		ret = 0;
+		break;
+	case 4:
+		if (vcpu->arch.cr4_pinned || (pin & ~KVM_CR4_PIN_ALLOWED)) {
+			ret = -KVM_EINVAL;
+			break;
+		}
+		vcpu->arch.cr4_pinned = pin;
+		kvm_x86_ops->set_cr4_guest_owned_bits(vcpu,
+				vcpu->arch.cr4_guest_owned_bits & ~pin);
+		ret = 0;
+		break;
+	default:
+		ret = -KVM_EOPNOTSUPP;
+		break;
+	}
+
+	return ret;
+}
+
 int kvm_emulate_hypercall(struct kvm_vcpu *vcpu)
 {
 	unsigned long nr, a0, a1, a2, a3, ret;
@@ -7424,6 +7479,9 @@ int kvm_emulate_hypercall(struct kvm_vcpu *vcpu)
 	case KVM_HC_SCHED_YIELD:
 		kvm_sched_yield(vcpu->kvm, a0);
 		ret = 0;
+		break;
+	case KVM_HC_CR_PIN:
+		ret = kvm_pin_cr_bits(vcpu, a0, a1);
 		break;
 	default:
 		ret = -KVM_ENOSYS;
@@ -8802,9 +8860,19 @@ static int __set_sregs(struct kvm_vcpu *vcpu, struct kvm_sregs *sregs)
 	mmu_reset_needed |= vcpu->arch.efer != sregs->efer;
 	kvm_x86_ops->set_efer(vcpu, sregs->efer);
 
+	vcpu->arch.cr0_pinned &= sregs->cr0;
+	kvm_x86_ops->set_cr0_guest_owned_bits(vcpu,
+			vcpu->arch.cr0_guest_owned_bits &
+			~vcpu->arch.cr0_pinned);
+
 	mmu_reset_needed |= kvm_read_cr0(vcpu) != sregs->cr0;
 	kvm_x86_ops->set_cr0(vcpu, sregs->cr0);
 	vcpu->arch.cr0 = sregs->cr0;
+
+	vcpu->arch.cr4_pinned &= sregs->cr4;
+	kvm_x86_ops->set_cr4_guest_owned_bits(vcpu,
+			vcpu->arch.cr4_guest_owned_bits &
+			~vcpu->arch.cr4_pinned);
 
 	mmu_reset_needed |= kvm_read_cr4(vcpu) != sregs->cr4;
 	cpuid_update_needed |= ((kvm_read_cr4(vcpu) ^ sregs->cr4) &

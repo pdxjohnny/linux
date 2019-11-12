@@ -152,3 +152,24 @@ a0: destination APIC ID
 
 Usage example: When sending a call-function IPI-many to vCPUs, yield if
 any of the IPI target vCPUs was preempted.
+
+12. KVM_HC_CR_PIN
+------------------------
+Architecture: x86
+Status: active
+Purpose: Hypercall used to configure pinned bits in control registers
+Usage:
+
+a0: Control register index
+
+a1: Mask of bits which should be 0 or 1 in the control register.
+
+The hypercall lets a guest enable bit pinning for control registers.
+Instructing the host to enforce guest specified restrictions upon the guest.
+These restrictions cannot be changed for the lifetime of the guest vcpu. This
+is to prevent attackers from disabling them before executing an attack they may
+prevent.
+
+Returns KVM_EINVAL if a1 is 0 or if a1 contains bits which are not allowed to
+be pinned. Bits which are allowed to be pinned can be found by reading the
+MSR_KVM_CR0_PIN_ALLOWED and MSR_KVM_CR4_PIN_ALLOWED MSRs.

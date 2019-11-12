@@ -282,3 +282,14 @@ MSR_KVM_POLL_CONTROL: 0x4b564d05
 	KVM guests can request the host not to poll on HLT, for example if
 	they are performing polling themselves.
 
+MSR_KVM_CR0_PIN_ALLOWED: 0x4b564d06
+MSR_KVM_CR4_PIN_ALLOWED: 0x4b564d07
+	Read only registers informing the guest which bits may be pinned for
+	each control register respectively via the CR pin hypercall.
+
+	data: Bits which may be pinned. Attempting to pin bits other than these
+	will result in a return code of -EINVAL from the CR pin hypercall.
+
+	Bits which are allowed to be pinned are WP for CR0 and SMEP, SMAP, and
+	UMIP for CR4.
+
