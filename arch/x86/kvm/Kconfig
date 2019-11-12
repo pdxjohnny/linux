@@ -96,6 +96,13 @@ config KVM_MMU_AUDIT
 	 This option adds a R/W kVM module parameter 'mmu_audit', which allows
 	 auditing of KVM MMU events at runtime.
 
+config KVM_HARDEN_CR_PINNING
+	bool "Guest CR pinning hardening support"
+	depends on KVM
+	---help---
+	 Select this option to enable kvm to allow for visualized guests
+	 to request that it be unable to unset bits in control registers.
+
 # OK, it's a little counter-intuitive to do this, but it puts it neatly under
 # the virtualization menu.
 source "drivers/vhost/Kconfig"

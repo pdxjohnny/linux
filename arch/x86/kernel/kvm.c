@@ -335,21 +335,23 @@ static void kvm_guest_cpu_init(void)
 		wrmsrl(MSR_KVM_PV_EOI_EN, pa);
 	}
 
+#ifdef CONFIG_PARAVIRT_HARDEN_CR_PINNING
 	if (kvm_para_has_feature(KVM_FEATURE_HARDEN)) {
 		unsigned long ret;
 
-		ret = kvm_hypercall2(KVM_HC_HARDEN, KVM_HC_HARDEN_CR0_PINNING, X86_CR0_WP);
-		if (ret == 0) {
+		ret = kvm_hypercall2(KVM_HC_HARDEN, KVM_HC_HARDEN_CR0_PINNING,
+				     X86_CR0_WP);
+		if (ret == 0)
 			printk(KERN_INFO"KVM setup cr0 pinning for cpu %d\n",
 			       smp_processor_id());
-		}
 
-		ret = kvm_hypercall2(KVM_HC_HARDEN, KVM_HC_HARDEN_CR4_PINNING, X86_CR4_SMEP | X86_CR4_SMAP);
-		if (ret == 0) {
+		ret = kvm_hypercall2(KVM_HC_HARDEN, KVM_HC_HARDEN_CR4_PINNING,
+				     X86_CR4_SMEP | X86_CR4_SMAP);
+		if (ret == 0)
 			printk(KERN_INFO"KVM setup cr4 pinning for cpu %d\n",
 			       smp_processor_id());
-		}
 	}
+#endif
 
 	if (has_steal_clock)
 		kvm_register_steal_time();

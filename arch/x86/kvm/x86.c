@@ -745,7 +745,9 @@ int kvm_set_cr0(struct kvm_vcpu *vcpu, unsigned long cr0)
 {
 	unsigned long old_cr0 = kvm_read_cr0(vcpu);
 	unsigned long update_bits = X86_CR0_PG | X86_CR0_WP;
+#ifdef CONFIG_KVM_HARDEN_CR_PINNING
 	unsigned long bits_missing = 0;
+#endif
 
 	cr0 |= X86_CR0_ET;
 
@@ -782,6 +784,7 @@ int kvm_set_cr0(struct kvm_vcpu *vcpu, unsigned long cr0)
 	if (!(cr0 & X86_CR0_PG) && kvm_read_cr4_bits(vcpu, X86_CR4_PCIDE))
 		return 1;
 
+#ifdef CONFIG_KVM_HARDEN_CR_PINNING
 	/* Ensure guest can't disable any bits it told us it never wanted to
 	 * disable. */
 	bits_missing = ~cr0 & (old_cr0 & vcpu->arch.harden.cr0_pinning);
@@ -790,6 +793,7 @@ int kvm_set_cr0(struct kvm_vcpu *vcpu, unsigned long cr0)
 			bits_missing);
 		return 1;
 	}
+#endif
 
 	kvm_x86_ops->set_cr0(vcpu, cr0);
 
@@ -894,7 +898,9 @@ int kvm_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 	unsigned long old_cr4 = kvm_read_cr4(vcpu);
 	unsigned long pdptr_bits = X86_CR4_PGE | X86_CR4_PSE | X86_CR4_PAE |
 				   X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_PKE;
+#ifdef CONFIG_KVM_HARDEN_CR_PINNING
 	unsigned long bits_missing = 0;
+#endif
 
 	if (cr4 & CR4_RESERVED_BITS)
 		return 1;
@@ -938,6 +944,7 @@ int kvm_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 			return 1;
 	}
 
+#ifdef CONFIG_KVM_HARDEN_CR_PINNING
 	/* Ensure guest can't disable any bits it told us it never wanted to
 	 * disable. */
 	bits_missing = ~cr4 & (old_cr4 & vcpu->arch.harden.cr4_pinning);
@@ -946,6 +953,7 @@ int kvm_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 			bits_missing);
 		return 1;
 	}
+#endif
 
 	if (kvm_x86_ops->set_cr4(vcpu, cr4))
 		return 1;
@@ -7243,6 +7251,7 @@ static unsigned long kvm_harden(struct kvm_vcpu *vcpu, unsigned long config_sele
 	unsigned long ret;
 
 	switch (config_select) {
+#ifdef CONFIG_KVM_HARDEN_CR_PINNING
 	case KVM_HC_HARDEN_CR0_PINNING:
 		vcpu->arch.harden.cr0_pinning |= (u32)config;
 		ret = 0;
@@ -7251,6 +7260,7 @@ static unsigned long kvm_harden(struct kvm_vcpu *vcpu, unsigned long config_sele
 		vcpu->arch.harden.cr4_pinning |= (u32)config;
 		ret = 0;
 		break;
+#endif
 	default:
 		ret = -KVM_EOPNOTSUPP;
 		break;
@@ -8985,7 +8995,9 @@ void kvm_arch_vcpu_postcreate(struct kvm_vcpu *vcpu)
 	/* poll control enabled by default */
 	vcpu->arch.msr_kvm_poll_control = 1;
 
+#ifdef CONFIG_KVM_HARDEN_CR_PINNING
 	memset(&(vcpu->arch.harden), 0, sizeof(vcpu->arch.harden));
+#endif
 
 	mutex_unlock(&vcpu->mutex);
 
@@ -9077,7 +9089,9 @@ void kvm_vcpu_reset(struct kvm_vcpu *vcpu, bool init_event)
 
 	vcpu->arch.ia32_xss = 0;
 
+#ifdef CONFIG_KVM_HARDEN_CR_PINNING
 	memset(&(vcpu->arch.harden), 0, sizeof(vcpu->arch.harden));
+#endif
 
 	kvm_x86_ops->vcpu_reset(vcpu, init_event);
 }

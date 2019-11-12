@@ -759,10 +759,12 @@ struct kvm_vcpu_arch {
 
 	u64 msr_kvm_poll_control;
 
+#ifdef CONFIG_KVM_HARDEN_CR_PINNING
 	struct {
 		u32 cr0_pinning;
 		u32 cr4_pinning;
 	} harden;
+#endif
 
 	/*
 	 * Indicate whether the access faults on its page table in guest

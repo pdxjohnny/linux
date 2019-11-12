@@ -830,6 +830,14 @@ config PARAVIRT_TIME_ACCOUNTING
 config PARAVIRT_CLOCK
 	bool
 
+config PARAVIRT_HARDEN_CR_PINNING
+	bool "Paravirtual bit pinning for CR0 and CR4"
+	depends on PARAVIRT && !KEXEC
+	---help---
+	  Select this option to have the virualized guest request that the
+	  hypervisor pin certain bits, such as SMEP, SMAP, and WP in Control
+	  Registers 0 and 4.
+
 config JAILHOUSE_GUEST
 	bool "Jailhouse non-root cell support"
 	depends on X86_64 && PCI
