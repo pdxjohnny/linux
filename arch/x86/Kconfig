@@ -758,6 +758,7 @@ if HYPERVISOR_GUEST
 
 config PARAVIRT
 	bool "Enable paravirtualization code"
+	select PARAVIRT_CR_PIN
 	---help---
 	  This changes the kernel so it can modify itself when it is run
 	  under a hypervisor, potentially improving performance significantly
@@ -838,6 +839,15 @@ config PARAVIRT_TIME_ACCOUNTING
 
 config PARAVIRT_CLOCK
 	bool
+
+config PARAVIRT_CR_PIN
+	bool "Paravirtual bit pinning for CR0 and CR4"
+	depends on PARAVIRT
+	help
+	  Select this option to have the virtualised guest request that the
+	  hypervisor disallow it from disabling  SMEP, SMAP, UMIP, and WP bits
+	  set in control registers. When enabled, this is a ROP resistant
+	  version of the existing natively implemented cr pinning.
 
 config JAILHOUSE_GUEST
 	bool "Jailhouse non-root cell support"
