@@ -112,6 +112,23 @@ static inline void kvm_spinlock_init(void)
 }
 #endif /* CONFIG_PARAVIRT_SPINLOCKS */
 
+#ifdef CONFIG_PARAVIRT_CR_PIN
+void __init kvm_paravirt_cr_pinning_init(void);
+void kvm_setup_paravirt_cr_pinning(unsigned long cr0_pinned_bits,
+				   unsigned long cr4_pinned_bits);
+#else
+static inline void kvm_paravirt_cr_pinning_init(void)
+{
+	return;
+}
+
+static inline void kvm_setup_paravirt_cr_pinning(unsigned long cr0_pinned_bits,
+						 unsigned long cr4_pinned_bits)
+{
+	return;
+}
+#endif /* CONFIG_PARAVIRT_CR_PIN */
+
 #else /* CONFIG_KVM_GUEST */
 #define kvm_async_pf_task_wait_schedule(T) do {} while(0)
 #define kvm_async_pf_task_wake(T) do {} while(0)
@@ -144,6 +161,17 @@ static inline void kvm_disable_steal_time(void)
 static inline bool kvm_handle_async_pf(struct pt_regs *regs, u32 token)
 {
 	return false;
+}
+
+static inline void kvm_paravirt_cr_pinning_init(void)
+{
+	return;
+}
+
+static inline void kvm_setup_paravirt_cr_pinning(unsigned long cr0_pinned_bits,
+						 unsigned long cr4_pinned_bits)
+{
+	return;
 }
 #endif
 
