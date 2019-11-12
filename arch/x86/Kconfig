@@ -800,6 +800,7 @@ config KVM_GUEST
 	bool "KVM Guest support (including kvmclock)"
 	depends on PARAVIRT
 	select PARAVIRT_CLOCK
+	select PARAVIRT_CR_PIN
 	select ARCH_CPUIDLE_HALTPOLL
 	default y
 	---help---
@@ -842,6 +843,15 @@ config PARAVIRT_TIME_ACCOUNTING
 
 config PARAVIRT_CLOCK
 	bool
+
+config PARAVIRT_CR_PIN
+       bool "Paravirtual bit pinning for CR0 and CR4"
+       depends on KVM_GUEST
+       help
+         Select this option to have the virtualised guest request that the
+         hypervisor disallow it from disabling protections set in control
+         registers. The hypervisor will prevent exploits from disabling
+         features such as SMEP, SMAP, UMIP, and WP.
 
 config JAILHOUSE_GUEST
 	bool "Jailhouse non-root cell support"

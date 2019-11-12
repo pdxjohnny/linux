@@ -26,6 +26,9 @@
 #include <asm/apic.h>
 #include <asm/bios_ebda.h>
 #include <asm/bugs.h>
+#include <asm/kasan.h>
+#include <asm/cmdline.h>
+
 #include <asm/cpu.h>
 #include <asm/efi.h>
 #include <asm/gart.h>
@@ -493,6 +496,11 @@ static void __init reserve_crashkernel(void)
 
 	if (xen_pv_domain()) {
 		pr_info("Ignoring crashkernel for a Xen PV domain\n");
+		return;
+	}
+
+	if (cmdline_find_option_bool(boot_command_line, "pv_cr_pin")) {
+		pr_info("Ignoring crashkernel since pv_cr_pin present in cmdline\n");
 		return;
 	}
 
