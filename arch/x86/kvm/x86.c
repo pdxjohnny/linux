@@ -733,6 +733,9 @@ bool pdptrs_changed(struct kvm_vcpu *vcpu)
 }
 EXPORT_SYMBOL_GPL(pdptrs_changed);
 
+#define KVM_CR0_PIN_ALLOWED	(X86_CR0_WP)
+#define KVM_CR4_PIN_ALLOWED	(X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_UMIP)
+
 int kvm_set_cr0(struct kvm_vcpu *vcpu, unsigned long cr0)
 {
 	unsigned long old_cr0 = kvm_read_cr0(vcpu);
@@ -751,6 +754,10 @@ int kvm_set_cr0(struct kvm_vcpu *vcpu, unsigned long cr0)
 		return 1;
 
 	if ((cr0 & X86_CR0_PG) && !(cr0 & X86_CR0_PE))
+		return 1;
+
+        if (!is_smm(vcpu) && !is_guest_mode(vcpu) &&
+	    ((cr0 ^ vcpu->arch.cr0_pinned.val) & vcpu->arch.cr0_pinned.mask))
 		return 1;
 
 	if (!is_paging(vcpu) && (cr0 & X86_CR0_PG)) {
@@ -930,6 +937,10 @@ int kvm_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 				   X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_PKE;
 
 	if (kvm_valid_cr4(vcpu, cr4))
+		return 1;
+
+        if (!is_smm(vcpu) && !is_guest_mode(vcpu) &&
+	    ((cr4 ^ vcpu->arch.cr4_pinned.val) & vcpu->arch.cr4_pinned.mask))
 		return 1;
 
 	if (is_long_mode(vcpu)) {
@@ -1255,6 +1266,10 @@ static const u32 emulated_msrs_all[] = {
 
 	MSR_K7_HWCR,
 	MSR_KVM_POLL_CONTROL,
+	MSR_KVM_CR0_PIN_ALLOWED,
+	MSR_KVM_CR4_PIN_ALLOWED,
+	MSR_KVM_CR0_PINNED,
+	MSR_KVM_CR4_PINNED,
 };
 
 static u32 emulated_msrs[ARRAY_SIZE(emulated_msrs_all)];
@@ -2878,6 +2893,32 @@ int kvm_set_msr_common(struct kvm_vcpu *vcpu, struct msr_data *msr_info)
 		vcpu->arch.msr_kvm_poll_control = data;
 		break;
 
+	case MSR_KVM_CR0_PIN_ALLOWED:
+	case MSR_KVM_CR4_PIN_ALLOWED:
+		/* Ignore all writes to these MSRs since they're read only */
+		break;
+	case MSR_KVM_CR0_PINNED:
+		if (data & ~KVM_CR0_PIN_ALLOWED)
+			return 1;
+
+		if (!msr_info->host_initiated &&
+		    (~data & vcpu->arch.cr0_pinned.mask))
+			return 1;
+
+		vcpu->arch.cr0_pinned.mask = data;
+		vcpu->arch.cr0_pinned.val = kvm_read_cr0(vcpu) & data;
+		break;
+	case MSR_KVM_CR4_PINNED:
+		if (data & ~KVM_CR4_PIN_ALLOWED)
+			return 1;
+
+		if (!msr_info->host_initiated &&
+		    (~data & vcpu->arch.cr4_pinned.mask))
+			return 1;
+
+		vcpu->arch.cr4_pinned.mask = data;
+		vcpu->arch.cr4_pinned.val = kvm_read_cr4(vcpu) & data;
+		break;
 	case MSR_IA32_MCG_CTL:
 	case MSR_IA32_MCG_STATUS:
 	case MSR_IA32_MC0_CTL ... MSR_IA32_MCx_CTL(KVM_MAX_MCE_BANKS) - 1:
@@ -3123,6 +3164,18 @@ int kvm_get_msr_common(struct kvm_vcpu *vcpu, struct msr_data *msr_info)
 		break;
 	case MSR_KVM_POLL_CONTROL:
 		msr_info->data = vcpu->arch.msr_kvm_poll_control;
+		break;
+	case MSR_KVM_CR0_PIN_ALLOWED:
+		msr_info->data = KVM_CR0_PIN_ALLOWED;
+		break;
+	case MSR_KVM_CR4_PIN_ALLOWED:
+		msr_info->data = KVM_CR4_PIN_ALLOWED;
+		break;
+	case MSR_KVM_CR0_PINNED:
+		msr_info->data = vcpu->arch.cr0_pinned.mask;
+		break;
+	case MSR_KVM_CR4_PINNED:
+		msr_info->data = vcpu->arch.cr4_pinned.mask;
 		break;
 	case MSR_IA32_P5_MC_ADDR:
 	case MSR_IA32_P5_MC_TYPE:
@@ -6319,12 +6372,26 @@ static void emulator_set_hflags(struct x86_emulate_ctxt *ctxt, unsigned emul_fla
 static int emulator_pre_leave_smm(struct x86_emulate_ctxt *ctxt,
 				  const char *smstate)
 {
-	return kvm_x86_ops->pre_leave_smm(emul_to_vcpu(ctxt), smstate);
+	struct kvm_vcpu *vcpu = emul_to_vcpu(ctxt);
+
+	return kvm_x86_ops->pre_leave_smm(vcpu, smstate);
 }
 
-static void emulator_post_leave_smm(struct x86_emulate_ctxt *ctxt)
+static int emulator_post_leave_smm(struct x86_emulate_ctxt *ctxt)
 {
+	struct kvm_vcpu *vcpu = emul_to_vcpu(ctxt);
+	unsigned long cr0 = kvm_read_cr0(vcpu);
+	unsigned long cr4 = kvm_read_cr4(vcpu);
+
+	if ((cr0 ^ vcpu->arch.cr0_pinned.val) & vcpu->arch.cr0_pinned.mask)
+		return 1;
+
+	if ((cr4 ^ vcpu->arch.cr4_pinned.val) & vcpu->arch.cr4_pinned.mask)
+		return 1;
+
 	kvm_smm_changed(emul_to_vcpu(ctxt));
+
+	return 0;
 }
 
 static int emulator_set_xcr(struct x86_emulate_ctxt *ctxt, u32 index, u64 xcr)
@@ -9489,6 +9556,9 @@ void kvm_vcpu_reset(struct kvm_vcpu *vcpu, bool init_event)
 	vcpu->arch.regs_dirty = ~0;
 
 	vcpu->arch.ia32_xss = 0;
+
+	memset(&vcpu->arch.cr0_pinned, 0, sizeof(vcpu->arch.cr0_pinned));
+	memset(&vcpu->arch.cr4_pinned, 0, sizeof(vcpu->arch.cr4_pinned));
 
 	kvm_x86_ops->vcpu_reset(vcpu, init_event);
 }

@@ -319,3 +319,41 @@ data:
 
 	KVM guests can request the host not to poll on HLT, for example if
 	they are performing polling themselves.
+
+MSR_KVM_CR0_PIN_ALLOWED: 0x4b564d06
+MSR_KVM_CR4_PIN_ALLOWED: 0x4b564d07
+	Read only registers informing the guest which bits may be pinned for
+	each control register respectively via the CR pinned MSRs.
+
+	data: Bits which may be pinned.
+
+	Attempting to pin bits other than these will result in a failure when
+	writing to the respective CR pinned MSR.
+
+	Bits which are allowed to be pinned are WP for CR0 and SMEP, SMAP, and
+	UMIP for CR4.
+
+MSR_KVM_CR0_PINNED: 0x4b564d08
+MSR_KVM_CR4_PINNED: 0x4b564d09
+	Used to configure pinned bits in control registers
+
+	data: Bits to be pinned.
+
+	Fails if data contains bits which are not allowed to be pinned. Bits
+	which are allowed to be pinned can be found by reading the CR pin
+	allowed MSRs.
+
+	The MSRs are read/write for host userspace, and write-only for the
+	guest.
+
+	Once set to a non-zero value, the guest cannot clear any of the bits
+	that have been pinned to 1. The guest can set more bits to 1, so long
+	as those bits appear in the allowed MSR.
+
+	Host userspace may clear or change pinned bits at any point. Host
+	userspace must clear pinned bits on reboot.
+
+	The MSR enables bit pinning for control registers. Pinning is active
+	when the guest is not in SMM. If the guest attempts to write values to
+	cr* where bits differ from pinned bits, the write will fail and the
+	guest will be sent a general protection fault.

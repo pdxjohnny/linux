@@ -558,6 +558,11 @@ struct kvm_vcpu_hv {
 	cpumask_t tlb_flush;
 };
 
+struct kvm_vcpu_cr_pinning {
+	unsigned long mask;
+	unsigned long val;
+};
+
 struct kvm_vcpu_arch {
 	/*
 	 * rip and regs accesses must go through
@@ -569,10 +574,12 @@ struct kvm_vcpu_arch {
 
 	unsigned long cr0;
 	unsigned long cr0_guest_owned_bits;
+	struct kvm_vcpu_cr_pinning cr0_pinned;
 	unsigned long cr2;
 	unsigned long cr3;
 	unsigned long cr4;
 	unsigned long cr4_guest_owned_bits;
+	struct kvm_vcpu_cr_pinning cr4_pinned;
 	unsigned long cr8;
 	u32 pkru;
 	u32 hflags;

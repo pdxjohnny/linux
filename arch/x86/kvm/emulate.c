@@ -2682,7 +2682,8 @@ static int em_rsm(struct x86_emulate_ctxt *ctxt)
 		return X86EMUL_UNHANDLEABLE;
 	}
 
-	ctxt->ops->post_leave_smm(ctxt);
+	if (ctxt->ops->post_leave_smm(ctxt))
+		return X86EMUL_UNHANDLEABLE;
 
 	return X86EMUL_CONTINUE;
 }
