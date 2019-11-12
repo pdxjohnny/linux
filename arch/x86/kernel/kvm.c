@@ -26,6 +26,7 @@
 #include <linux/kprobes.h>
 #include <linux/nmi.h>
 #include <linux/swait.h>
+#include <linux/init.h>
 #include <asm/timer.h>
 #include <asm/cpu.h>
 #include <asm/traps.h>
@@ -36,6 +37,7 @@
 #include <asm/hypervisor.h>
 #include <asm/tlb.h>
 #include <asm/cpuidle_haltpoll.h>
+#include <asm/cmdline.h>
 
 DEFINE_STATIC_KEY_FALSE(kvm_async_pf_enabled);
 
@@ -743,6 +745,7 @@ static void __init kvm_apic_init(void)
 static void __init kvm_init_platform(void)
 {
 	kvmclock_init();
+	kvm_paravirt_cr_pinning_init();
 	x86_platform.apic_post_init = kvm_apic_init;
 }
 
@@ -923,6 +926,39 @@ out:
 }
 
 #endif	/* CONFIG_PARAVIRT_SPINLOCKS */
+
+int kvm_paravirt_cr_pinning_enabled __ro_after_init = 0;
+
+void __init kvm_paravirt_cr_pinning_init(void)
+{
+	if (!IS_ENABLED(CONFIG_PARAVIRT_CR_PINNING))
+		return;
+
+	if (cmdline_find_option_bool(boot_command_line, "disable_pv_cr_pin"))
+		return;
+
+	if (!kvm_para_has_feature(KVM_FEATURE_CR_PIN)) {
+		pr_info_once("Paravirtualized control register pinning feature bit not present");
+		return;
+	}
+
+	kvm_paravirt_cr_pinning_enabled = 1;
+}
+
+void kvm_setup_paravirt_cr_pinning(unsigned long cr0_pinned_bits,
+				   unsigned long cr4_pinned_bits)
+{
+	u64 mask;
+
+	if (!kvm_paravirt_cr_pinning_enabled)
+		return;
+
+	rdmsrl(MSR_KVM_CR0_PIN_ALLOWED, mask);
+	wrmsrl(MSR_KVM_CR0_PINNED_HIGH, cr0_pinned_bits & mask);
+
+	rdmsrl(MSR_KVM_CR4_PIN_ALLOWED, mask);
+	wrmsrl(MSR_KVM_CR4_PINNED_HIGH, cr4_pinned_bits & mask);
+}
 
 #ifdef CONFIG_ARCH_CPUIDLE_HALTPOLL
 
