@@ -858,6 +858,23 @@ void __init kvm_spinlock_init(void)
 
 #endif	/* CONFIG_PARAVIRT_SPINLOCKS */
 
+#ifdef CONFIG_PARAVIRT_CR_PIN
+void kvm_setup_paravirt_cr_pinning(unsigned long cr0_pinned_bits,
+				   unsigned long cr4_pinned_bits)
+{
+	u64 mask;
+
+	if (!kvm_para_has_feature(KVM_FEATURE_CR_PIN))
+		return;
+
+	rdmsrl(MSR_KVM_CR0_PIN_ALLOWED, mask);
+	wrmsrl(MSR_KVM_CR0_PINNED, cr0_pinned_bits & mask);
+
+	rdmsrl(MSR_KVM_CR4_PIN_ALLOWED, mask);
+	wrmsrl(MSR_KVM_CR4_PINNED, cr4_pinned_bits & mask);
+}
+#endif
+
 #ifdef CONFIG_ARCH_CPUIDLE_HALTPOLL
 
 static void kvm_disable_host_haltpoll(void *i)
