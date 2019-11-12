@@ -3836,6 +3836,17 @@
 			[KNL] Number of legacy pty's. Overwrites compiled-in
 			default number.
 
+	pv_cr_pin	[SECURITY,X86]
+			Enable paravirtualized control register pinning. When
+			running paravirutalized under KVM, request that KVM not
+			allow the guest to disable kernel protection features
+			set in CPU control registers. Specifying this option
+			will disable kexec (and crashkernel). If kexec support
+			has not been compiled into the kernel and host KVM
+			supports paravirtualized control register pinning, it
+			will be active by default without the need to specify
+			this parameter.
+
 	quiet		[KNL] Disable most log messages
 
 	r128=		[HW,DRM]
