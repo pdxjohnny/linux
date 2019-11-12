@@ -758,6 +758,7 @@ if HYPERVISOR_GUEST
 
 config PARAVIRT
 	bool "Enable paravirtualization code"
+	select PARAVIRT_HARDEN_CR_PINNING
 	---help---
 	  This changes the kernel so it can modify itself when it is run
 	  under a hypervisor, potentially improving performance significantly
@@ -838,6 +839,14 @@ config PARAVIRT_TIME_ACCOUNTING
 
 config PARAVIRT_CLOCK
 	bool
+
+config PARAVIRT_HARDEN_CR_PINNING
+	bool "Paravirtual bit pinning for CR0 and CR4"
+	depends on PARAVIRT && !KEXEC
+	help
+	  Select this option to have the virtualised guest request the
+	  hypervisor disallow it from disabling protections set in control
+	  registers.
 
 config JAILHOUSE_GUEST
 	bool "Jailhouse non-root cell support"
