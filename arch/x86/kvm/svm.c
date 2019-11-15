@@ -2541,7 +2541,7 @@ static void update_cr0_intercept(struct vcpu_svm *svm)
 
 	mark_dirty(svm->vmcb, VMCB_CR);
 
-	if (gcr0 == *hcr0) {
+	if (gcr0 == *hcr0 && ~svm->vcpu.arch.cr0_guest_owned_bits == 0U) {
 		clr_cr_intercept(svm, INTERCEPT_CR0_READ);
 		clr_cr_intercept(svm, INTERCEPT_CR0_WRITE);
 	} else {
@@ -2602,6 +2602,42 @@ static int svm_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 	to_svm(vcpu)->vmcb->save.cr4 = cr4;
 	mark_dirty(to_svm(vcpu)->vmcb, VMCB_CR);
 	return 0;
+}
+
+static void svm_set_cr0_guest_owned_bits(struct kvm_vcpu *vcpu,
+					 unsigned long cr0_guest_owned_bits)
+{
+	struct vcpu_svm *svm = to_svm(vcpu);
+
+	mark_dirty(svm->vmcb, VMCB_CR);
+
+	if (~cr0_guest_owned_bits == 0U) {
+		set_cr_intercept(svm, INTERCEPT_CR0_READ);
+		set_cr_intercept(svm, INTERCEPT_CR0_WRITE);
+	} else {
+		clr_cr_intercept(svm, INTERCEPT_CR0_READ);
+		clr_cr_intercept(svm, INTERCEPT_CR0_WRITE);
+	}
+
+	vcpu->arch.cr0_guest_owned_bits = cr0_guest_owned_bits;
+}
+
+static void svm_set_cr4_guest_owned_bits(struct kvm_vcpu *vcpu,
+					 unsigned long cr4_guest_owned_bits)
+{
+	struct vcpu_svm *svm = to_svm(vcpu);
+
+	mark_dirty(svm->vmcb, VMCB_CR);
+
+	if (~cr4_guest_owned_bits == 0U) {
+		set_cr_intercept(svm, INTERCEPT_CR4_READ);
+		set_cr_intercept(svm, INTERCEPT_CR4_WRITE);
+	} else {
+		clr_cr_intercept(svm, INTERCEPT_CR4_READ);
+		clr_cr_intercept(svm, INTERCEPT_CR4_WRITE);
+	}
+
+	vcpu->arch.cr4_guest_owned_bits = cr4_guest_owned_bits;
 }
 
 static void svm_set_segment(struct kvm_vcpu *vcpu,
@@ -7219,6 +7255,8 @@ static struct kvm_x86_ops svm_x86_ops __ro_after_init = {
 	.set_cr0 = svm_set_cr0,
 	.set_cr3 = svm_set_cr3,
 	.set_cr4 = svm_set_cr4,
+	.set_cr0_guest_owned_bits = svm_set_cr0_guest_owned_bits,
+	.set_cr4_guest_owned_bits = svm_set_cr4_guest_owned_bits,
 	.set_efer = svm_set_efer,
 	.get_idt = svm_get_idt,
 	.set_idt = svm_set_idt,

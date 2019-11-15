@@ -131,9 +131,6 @@ module_param_named(preemption_timer, enable_preemption_timer, bool, S_IRUGO);
 #define KVM_VM_CR0_ALWAYS_ON				\
 	(KVM_VM_CR0_ALWAYS_ON_UNRESTRICTED_GUEST | 	\
 	 X86_CR0_WP | X86_CR0_PG | X86_CR0_PE)
-#define KVM_CR4_GUEST_OWNED_BITS				      \
-	(X86_CR4_PVI | X86_CR4_DE | X86_CR4_PCE | X86_CR4_OSFXSR      \
-	 | X86_CR4_OSXMMEXCPT | X86_CR4_LA57 | X86_CR4_TSD)
 
 #define KVM_VM_CR4_ALWAYS_ON_UNRESTRICTED_GUEST X86_CR4_VMXE
 #define KVM_PMODE_VM_CR4_ALWAYS_ON (X86_CR4_PAE | X86_CR4_VMXE)
@@ -3083,6 +3080,25 @@ int vmx_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 	return 0;
 }
 
+void vmx_set_cr0_guest_owned_bits(struct kvm_vcpu *vcpu,
+				  unsigned long cr0_guest_owned_bits)
+{
+	vcpu->arch.cr0_guest_owned_bits = cr0_guest_owned_bits;
+	vmcs_writel(CR0_GUEST_HOST_MASK, ~cr0_guest_owned_bits);
+}
+
+void vmx_set_cr4_guest_owned_bits(struct kvm_vcpu *vcpu,
+				  unsigned long cr4_guest_owned_bits)
+{
+	vcpu->arch.cr4_guest_owned_bits = cr4_guest_owned_bits;
+	if (enable_ept)
+		vcpu->arch.cr4_guest_owned_bits |= X86_CR4_PGE;
+	if (is_guest_mode(vcpu))
+		vcpu->arch.cr4_guest_owned_bits &=
+			~get_vmcs12(vcpu)->cr4_guest_host_mask;
+	vmcs_writel(CR4_GUEST_HOST_MASK, ~vcpu->arch.cr4_guest_owned_bits);
+}
+
 void vmx_get_segment(struct kvm_vcpu *vcpu, struct kvm_segment *var, int seg)
 {
 	struct vcpu_vmx *vmx = to_vmx(vcpu);
@@ -3913,17 +3929,6 @@ void vmx_set_constant_host_state(struct vcpu_vmx *vmx)
 		vmcs_write64(HOST_IA32_EFER, host_efer);
 }
 
-void set_cr4_guest_host_mask(struct vcpu_vmx *vmx)
-{
-	vmx->vcpu.arch.cr4_guest_owned_bits = KVM_CR4_GUEST_OWNED_BITS;
-	if (enable_ept)
-		vmx->vcpu.arch.cr4_guest_owned_bits |= X86_CR4_PGE;
-	if (is_guest_mode(&vmx->vcpu))
-		vmx->vcpu.arch.cr4_guest_owned_bits &=
-			~get_vmcs12(&vmx->vcpu)->cr4_guest_host_mask;
-	vmcs_writel(CR4_GUEST_HOST_MASK, ~vmx->vcpu.arch.cr4_guest_owned_bits);
-}
-
 u32 vmx_pin_based_exec_ctrl(struct vcpu_vmx *vmx)
 {
 	u32 pin_based_exec_ctrl = vmcs_config.pin_based_exec_ctrl;
@@ -4229,10 +4234,9 @@ static void vmx_vcpu_setup(struct vcpu_vmx *vmx)
 	/* 22.2.1, 20.8.1 */
 	vm_entry_controls_set(vmx, vmx_vmentry_ctrl());
 
-	vmx->vcpu.arch.cr0_guest_owned_bits = X86_CR0_TS;
-	vmcs_writel(CR0_GUEST_HOST_MASK, ~X86_CR0_TS);
+	vmx_set_cr0_guest_owned_bits(&vmx->vcpu, X86_CR0_TS);
 
-	set_cr4_guest_host_mask(vmx);
+	vmx_set_cr4_guest_owned_bits(&vmx->vcpu, KVM_CR4_GUEST_OWNED_BITS);
 
 	if (vmx_xsaves_supported())
 		vmcs_write64(XSS_EXIT_BITMAP, VMX_XSS_EXIT_BITMAP);
@@ -7769,6 +7773,8 @@ static struct kvm_x86_ops vmx_x86_ops __ro_after_init = {
 	.set_cr0 = vmx_set_cr0,
 	.set_cr3 = vmx_set_cr3,
 	.set_cr4 = vmx_set_cr4,
+	.set_cr0_guest_owned_bits = vmx_set_cr0_guest_owned_bits,
+	.set_cr4_guest_owned_bits = vmx_set_cr4_guest_owned_bits,
 	.set_efer = vmx_set_efer,
 	.get_idt = vmx_get_idt,
 	.set_idt = vmx_set_idt,
