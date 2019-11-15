@@ -321,6 +321,10 @@ void vmx_set_efer(struct kvm_vcpu *vcpu, u64 efer);
 void vmx_set_cr0(struct kvm_vcpu *vcpu, unsigned long cr0);
 void vmx_set_cr3(struct kvm_vcpu *vcpu, unsigned long cr3);
 int vmx_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4);
+void vmx_set_cr0_guest_owned_bits(struct kvm_vcpu *vcpu,
+				  unsigned long cr0_guest_owned_bits);
+void vmx_set_cr4_guest_owned_bits(struct kvm_vcpu *vcpu,
+				  unsigned long cr4_guest_owned_bits);
 void set_cr4_guest_host_mask(struct vcpu_vmx *vmx);
 void ept_save_pdptrs(struct kvm_vcpu *vcpu);
 void vmx_get_segment(struct kvm_vcpu *vcpu, struct kvm_segment *var, int seg);

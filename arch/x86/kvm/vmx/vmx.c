@@ -3097,6 +3097,25 @@ int vmx_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 	return 0;
 }
 
+void vmx_set_cr0_guest_owned_bits(struct kvm_vcpu *vcpu,
+				  unsigned long cr0_guest_owned_bits)
+{
+	vcpu->arch.cr0_guest_owned_bits = cr0_guest_owned_bits;
+	vmcs_writel(CR0_GUEST_HOST_MASK, ~cr0_guest_owned_bits);
+}
+
+void vmx_set_cr4_guest_owned_bits(struct kvm_vcpu *vcpu,
+				  unsigned long cr4_guest_owned_bits)
+{
+	vcpu->arch.cr4_guest_owned_bits = cr4_guest_owned_bits;
+	if (enable_ept)
+		vcpu->arch.cr4_guest_owned_bits |= X86_CR4_PGE;
+	if (is_guest_mode(vcpu))
+		vcpu->arch.cr4_guest_owned_bits &=
+			~get_vmcs12(vcpu)->cr4_guest_host_mask;
+	vmcs_writel(CR4_GUEST_HOST_MASK, ~vcpu->arch.cr4_guest_owned_bits);
+}
+
 void vmx_get_segment(struct kvm_vcpu *vcpu, struct kvm_segment *var, int seg)
 {
 	struct vcpu_vmx *vmx = to_vmx(vcpu);
