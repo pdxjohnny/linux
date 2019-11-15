@@ -2604,6 +2604,18 @@ static int svm_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 	return 0;
 }
 
+static void svm_set_cr0_guest_owned_bits(struct kvm_vcpu *vcpu,
+					 unsigned long cr0_guest_owned_bits)
+{
+	vcpu->arch.cr0_guest_owned_bits = cr0_guest_owned_bits;
+}
+
+static void svm_set_cr4_guest_owned_bits(struct kvm_vcpu *vcpu,
+					 unsigned long cr4_guest_owned_bits)
+{
+	vcpu->arch.cr4_guest_owned_bits = cr4_guest_owned_bits;
+}
+
 static void svm_set_segment(struct kvm_vcpu *vcpu,
 			    struct kvm_segment *var, int seg)
 {
