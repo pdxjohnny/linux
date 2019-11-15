@@ -321,6 +321,10 @@ void vmx_set_efer(struct kvm_vcpu *vcpu, u64 efer);
 void vmx_set_cr0(struct kvm_vcpu *vcpu, unsigned long cr0);
 void vmx_set_cr3(struct kvm_vcpu *vcpu, unsigned long cr3);
 int vmx_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4);
+void vmx_set_cr0_guest_owned_bits(struct kvm_vcpu *vcpu,
+				  unsigned long cr0_guest_owned_bits);
+void vmx_set_cr4_guest_owned_bits(struct kvm_vcpu *vcpu,
+				  unsigned long cr4_guest_owned_bits);
 void set_cr4_guest_host_mask(struct vcpu_vmx *vmx);
 void ept_save_pdptrs(struct kvm_vcpu *vcpu);
 void vmx_get_segment(struct kvm_vcpu *vcpu, struct kvm_segment *var, int seg);
@@ -334,6 +338,10 @@ void vmx_set_virtual_apic_mode(struct kvm_vcpu *vcpu);
 struct shared_msr_entry *find_msr_entry(struct vcpu_vmx *vmx, u32 msr);
 void pt_update_intercept_for_msr(struct vcpu_vmx *vmx);
 void vmx_update_host_rsp(struct vcpu_vmx *vmx, unsigned long host_rsp);
+
+#define KVM_CR4_GUEST_OWNED_BITS				      \
+	(X86_CR4_PVI | X86_CR4_DE | X86_CR4_PCE | X86_CR4_OSFXSR      \
+	 | X86_CR4_OSXMMEXCPT | X86_CR4_LA57 | X86_CR4_TSD)
 
 #define POSTED_INTR_ON  0
 #define POSTED_INTR_SN  1
