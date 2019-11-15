@@ -2288,7 +2288,7 @@ static void prepare_vmcs02_rare(struct vcpu_vmx *vmx, struct vmcs12 *vmcs12)
 	vmcs_write32(VM_EXIT_MSR_LOAD_COUNT, vmx->msr_autoload.host.nr);
 	vmcs_write32(VM_ENTRY_MSR_LOAD_COUNT, vmx->msr_autoload.guest.nr);
 
-	set_cr4_guest_host_mask(vmx);
+	vmx_set_cr4_guest_owned_bits(&vmx->vcpu, KVM_CR4_GUEST_OWNED_BITS);
 }
 
 /*
@@ -2336,8 +2336,8 @@ static int prepare_vmcs02(struct kvm_vcpu *vcpu, struct vmcs12 *vmcs12,
 	 * trap. Note that CR0.TS also needs updating - we do this later.
 	 */
 	update_exception_bitmap(vcpu);
-	vcpu->arch.cr0_guest_owned_bits &= ~vmcs12->cr0_guest_host_mask;
-	vmcs_writel(CR0_GUEST_HOST_MASK, ~vcpu->arch.cr0_guest_owned_bits);
+	vmx_set_cr0_guest_owned_bits(vcpu, vcpu->arch.cr0_guest_owned_bits &
+			~vmcs12->cr0_guest_host_mask);
 
 	if (vmx->nested.nested_run_pending &&
 	    (vmcs12->vm_entry_controls & VM_ENTRY_LOAD_IA32_PAT)) {
@@ -3812,7 +3812,7 @@ static void load_vmcs12_host_state(struct kvm_vcpu *vcpu,
 	vcpu->arch.cr0_guest_owned_bits = X86_CR0_TS;
 	vmx_set_cr0(vcpu, vmcs12->host_cr0);
 
-	/* Same as above - no reason to call set_cr4_guest_host_mask().  */
+	/* Same as above - no reason to call vmx_set_cr4_guest_owned_bits().  */
 	vcpu->arch.cr4_guest_owned_bits = ~vmcs_readl(CR4_GUEST_HOST_MASK);
 	vmx_set_cr4(vcpu, vmcs12->host_cr4);
 
