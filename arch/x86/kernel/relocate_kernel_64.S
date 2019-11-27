@@ -120,8 +120,8 @@ identity_mapped:
 	 *  - Proctected mode enabled
 	 */
 	movq	%cr0, %rax
-	andq	$~(X86_CR0_AM | X86_CR0_WP | X86_CR0_TS | X86_CR0_EM), %rax
-	orl	$(X86_CR0_PG | X86_CR0_PE), %eax
+	andq	$~(X86_CR0_AM | X86_CR0_TS | X86_CR0_EM), %rax
+	orl	$(X86_CR0_PG | X86_CR0_PE | X86_CR0_WP), %eax
 	movq	%rax, %cr0
 
 	/*
