@@ -129,7 +129,7 @@ identity_mapped:
 	 *  - physical address extension enabled
 	 *  - 5-level paging, if it was enabled before
 	 */
-	movl	$X86_CR4_PAE, %eax
+	movl	$(X86_CR4_PAE | X86_CR4_SMEP), %eax
 	testq	$X86_CR4_LA57, %r13
 	jz	1f
 	orl	$X86_CR4_LA57, %eax
