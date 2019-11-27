@@ -126,7 +126,7 @@ ENTRY(startup_32)
 
 	/* Enable PAE mode */
 	movl	%cr4, %eax
-	orl	$X86_CR4_PAE, %eax
+	orl	$(X86_CR4_PAE | X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_UMIP), %eax
 	movl	%eax, %cr4
 
  /*
@@ -217,7 +217,7 @@ ENTRY(startup_32)
 	pushl	%eax
 
 	/* Enter paged protected Mode, activating Long Mode */
-	movl	$(X86_CR0_PG | X86_CR0_PE), %eax /* Enable Paging and Protected mode */
+	movl	$(X86_CR0_PG | X86_CR0_PE | X86_CR0_WP), %eax /* Enable Paging and Protected mode */
 	movl	%eax, %cr0
 
 	/* Jump from 32bit compatibility mode into 64bit mode. */
@@ -614,10 +614,10 @@ ENTRY(trampoline_32bit_src)
 	popl	%ecx
 
 	/* Enable PAE and LA57 (if required) paging modes */
-	movl	$X86_CR4_PAE, %eax
+	movl	$(X86_CR4_PAE | X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_UMIP), %eax
 	cmpl	$0, %edx
 	jz	1f
-	orl	$X86_CR4_LA57, %eax
+	orl	$(X86_CR4_LA57 | X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_UMIP), %eax
 1:
 	movl	%eax, %cr4
 
@@ -629,7 +629,7 @@ ENTRY(trampoline_32bit_src)
 	pushl	%eax
 
 	/* Enable paging again */
-	movl	$(X86_CR0_PG | X86_CR0_PE), %eax
+	movl	$(X86_CR0_PG | X86_CR0_PE | X86_CR0_WP), %eax
 	movl	%eax, %cr0
 
 	lret
