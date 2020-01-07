@@ -123,6 +123,13 @@ ENTRY(secondary_startup_64)
 
 	/* Enable PAE mode, PGE and LA57 */
 	movl	$(X86_CR4_PAE | X86_CR4_PGE), %ecx
+
+	/* Set SMEP if already enabled */
+	testl	$X86_CR4_SMEP, %cr4
+	jz	1f
+	orl	$X86_CR4_SMEP, %ecx
+1:
+
 #ifdef CONFIG_X86_5LEVEL
 	testl	$1, __pgtable_l5_enabled(%rip)
 	jz	1f

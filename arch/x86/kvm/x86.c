@@ -753,8 +753,10 @@ int kvm_set_cr0(struct kvm_vcpu *vcpu, unsigned long cr0)
 	if ((cr0 & X86_CR0_PG) && !(cr0 & X86_CR0_PE))
 		return 1;
 
-	if (!is_smm(vcpu) && (cr0 ^ old_cr0) & vcpu->arch.cr0_pinned)
+	if (!is_smm(vcpu) && (cr0 ^ old_cr0) & vcpu->arch.cr0_pinned) {
+		pr_info("kvm: Guest fucked up cr0, blastm\n");
 		return 1;
+	}
 
 	if (!is_paging(vcpu) && (cr0 & X86_CR0_PG)) {
 #ifdef CONFIG_X86_64
@@ -919,8 +921,10 @@ int kvm_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 	if (kvm_valid_cr4(vcpu, cr4))
 		return 1;
 
-	if (!is_smm(vcpu) && (cr4 ^ old_cr4) & vcpu->arch.cr4_pinned)
+	if (!is_smm(vcpu) && (cr4 ^ old_cr4) & vcpu->arch.cr4_pinned) {
+		pr_info("kvm: Guest fucked up cr4, blastm\n");
 		return 1;
+	}
 
 	if (is_long_mode(vcpu)) {
 		if (!(cr4 & X86_CR4_PAE))

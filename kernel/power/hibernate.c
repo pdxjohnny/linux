@@ -451,9 +451,15 @@ static int resume_target_kernel(bool platform_mode)
 	if (error)
 		goto Cleanup;
 
+	pr_info("info: suspend_disable_secondary_cpus\n");
+	pr_debug("debug: suspend_disable_secondary_cpus\n");
+
 	error = hibernate_resume_nonboot_cpu_disable();
 	if (error)
 		goto Enable_cpus;
+
+	pr_info("info: post suspend_disable_secondary_cpus\n");
+	pr_debug("debug: post suspend_disable_secondary_cpus\n");
 
 	local_irq_disable();
 	system_state = SYSTEM_SUSPEND;

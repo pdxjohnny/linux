@@ -615,6 +615,13 @@ ENTRY(trampoline_32bit_src)
 
 	/* Enable PAE and LA57 (if required) paging modes */
 	movl	$X86_CR4_PAE, %eax
+
+	/* Set SMEP if already enabled */
+	testl	$X86_CR4_SMEP, %cr4
+	jz	1f
+	orl	$X86_CR4_SMEP, %eax
+1:
+
 	cmpl	$0, %edx
 	jz	1f
 	orl	$X86_CR4_LA57, %eax

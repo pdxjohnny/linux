@@ -130,6 +130,13 @@ identity_mapped:
 	 *  - 5-level paging, if it was enabled before
 	 */
 	movl	$X86_CR4_PAE, %eax
+
+	/* Set SMEP if already enabled */
+	testl	$X86_CR4_SMEP, %r13
+	jz	1f
+	orl	$X86_CR4_SMEP, %eax
+1:
+
 	testq	$X86_CR4_LA57, %r13
 	jz	1f
 	orl	$X86_CR4_LA57, %eax
