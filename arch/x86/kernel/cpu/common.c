@@ -299,7 +299,7 @@ __setup("nosmep", setup_disable_smep);
 static __always_inline void setup_smep(struct cpuinfo_x86 *c)
 {
 	if (cpu_has(c, X86_FEATURE_SMEP))
-		cr4_set_bits(X86_CR4_SMEP);
+		cr4_set_bits_and_update_boot(X86_CR4_SMEP);
 }
 
 static __init int setup_disable_smap(char *arg)
@@ -318,7 +318,7 @@ static __always_inline void setup_smap(struct cpuinfo_x86 *c)
 
 	if (cpu_has(c, X86_FEATURE_SMAP)) {
 #ifdef CONFIG_X86_SMAP
-		cr4_set_bits(X86_CR4_SMAP);
+		cr4_set_bits_and_update_boot(X86_CR4_SMAP);
 #else
 		cr4_clear_bits(X86_CR4_SMAP);
 #endif
@@ -335,7 +335,7 @@ static __always_inline void setup_umip(struct cpuinfo_x86 *c)
 	if (!cpu_has(c, X86_FEATURE_UMIP))
 		goto out;
 
-	cr4_set_bits(X86_CR4_UMIP);
+	cr4_set_bits_and_update_boot(X86_CR4_UMIP);
 
 	pr_info_once("x86/cpu: User Mode Instruction Prevention (UMIP) activated\n");
 
@@ -1561,7 +1561,7 @@ static void identify_cpu(struct cpuinfo_x86 *c)
 
 	/* Enable FSGSBASE instructions if available. */
 	if (cpu_has(c, X86_FEATURE_FSGSBASE)) {
-		cr4_set_bits(X86_CR4_FSGSBASE);
+		cr4_set_bits_and_update_boot(X86_CR4_FSGSBASE);
 		elf_hwcap2 |= HWCAP2_FSGSBASE;
 	}
 
