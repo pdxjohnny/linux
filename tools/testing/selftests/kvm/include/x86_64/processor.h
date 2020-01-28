@@ -197,6 +197,11 @@ static inline uint64_t get_cr0(void)
 	return cr0;
 }
 
+static inline void set_cr0(uint64_t val)
+{
+	__asm__ __volatile__("mov %0, %%cr0" : : "r" (val) : "memory");
+}
+
 static inline uint64_t get_cr3(void)
 {
 	uint64_t cr3;
@@ -379,5 +384,13 @@ void kvm_get_cpu_address_width(unsigned int *pa_bits, unsigned int *va_bits);
 
 /* VMX_EPT_VPID_CAP bits */
 #define VMX_EPT_VPID_CAP_AD_BITS       (1ULL << 21)
+
+/* KVM MSRs */
+#define MSR_KVM_CR0_PIN_ALLOWED	0x4b564d06
+#define MSR_KVM_CR4_PIN_ALLOWED	0x4b564d07
+#define MSR_KVM_CR0_PINNED_LOW	0x4b564d08
+#define MSR_KVM_CR0_PINNED_HIGH	0x4b564d09
+#define MSR_KVM_CR4_PINNED_LOW	0x4b564d0a
+#define MSR_KVM_CR4_PINNED_HIGH	0x4b564d0b
 
 #endif /* SELFTEST_KVM_PROCESSOR_H */
