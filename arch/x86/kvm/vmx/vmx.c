@@ -3070,6 +3070,8 @@ int vmx_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 
 	vcpu->arch.cr4 = cr4;
 
+	pr_info("kvm: vmx: vcpu->arch.cr4 = %lx\n", cr4);
+
 	if (!enable_unrestricted_guest) {
 		if (enable_ept) {
 			if (!is_paging(vcpu)) {

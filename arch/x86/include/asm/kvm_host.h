@@ -587,6 +587,7 @@ struct kvm_vcpu_arch {
 	int mp_state;
 	u64 ia32_misc_enable_msr;
 	u64 smbase;
+	char *ro_smram;
 	u64 smi_count;
 	bool tpr_access_reporting;
 	bool xsaves_enabled;

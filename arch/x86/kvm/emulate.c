@@ -2485,7 +2485,8 @@ static int rsm_enter_protected_mode(struct x86_emulate_ctxt *ctxt,
 }
 
 static int rsm_load_state_32(struct x86_emulate_ctxt *ctxt,
-			     const char *smstate)
+			     const char *smstate,
+			     const char *ro_smram)
 {
 	struct desc_struct desc;
 	struct desc_ptr dt;
@@ -2541,7 +2542,8 @@ static int rsm_load_state_32(struct x86_emulate_ctxt *ctxt,
 
 #ifdef CONFIG_X86_64
 static int rsm_load_state_64(struct x86_emulate_ctxt *ctxt,
-			     const char *smstate)
+			     const char *smstate,
+			     const char *ro_smram)
 {
 	struct desc_struct desc;
 	struct desc_ptr dt;
@@ -2556,38 +2558,38 @@ static int rsm_load_state_64(struct x86_emulate_ctxt *ctxt,
 	ctxt->_eip   = GET_SMSTATE(u64, smstate, 0x7f78);
 	ctxt->eflags = GET_SMSTATE(u32, smstate, 0x7f70) | X86_EFLAGS_FIXED;
 
-	val = GET_SMSTATE(u32, smstate, 0x7f68);
+	val = GET_SMSTATE(u32, ro_smram, 0x7f68);
 	ctxt->ops->set_dr(ctxt, 6, (val & DR6_VOLATILE) | DR6_FIXED_1);
-	val = GET_SMSTATE(u32, smstate, 0x7f60);
+	val = GET_SMSTATE(u32, ro_smram, 0x7f60);
 	ctxt->ops->set_dr(ctxt, 7, (val & DR7_VOLATILE) | DR7_FIXED_1);
 
-	cr0 =                       GET_SMSTATE(u64, smstate, 0x7f58);
-	cr3 =                       GET_SMSTATE(u64, smstate, 0x7f50);
-	cr4 =                       GET_SMSTATE(u64, smstate, 0x7f48);
+	cr0 =                       GET_SMSTATE(u64, ro_smram, 0x7f58);
+	cr3 =                       GET_SMSTATE(u64, ro_smram, 0x7f50);
+	cr4 =                       GET_SMSTATE(u64, ro_smram, 0x7f48);
 	ctxt->ops->set_smbase(ctxt, GET_SMSTATE(u32, smstate, 0x7f00));
-	val =                       GET_SMSTATE(u64, smstate, 0x7ed0);
+	val =                       GET_SMSTATE(u64, ro_smram, 0x7ed0);
 	ctxt->ops->set_msr(ctxt, MSR_EFER, val & ~EFER_LMA);
 
-	selector =                  GET_SMSTATE(u32, smstate, 0x7e90);
-	rsm_set_desc_flags(&desc,   GET_SMSTATE(u32, smstate, 0x7e92) << 8);
-	set_desc_limit(&desc,       GET_SMSTATE(u32, smstate, 0x7e94));
-	set_desc_base(&desc,        GET_SMSTATE(u32, smstate, 0x7e98));
-	base3 =                     GET_SMSTATE(u32, smstate, 0x7e9c);
+	selector =                  GET_SMSTATE(u32, ro_smram, 0x7e90);
+	rsm_set_desc_flags(&desc,   GET_SMSTATE(u32, ro_smram, 0x7e92) << 8);
+	set_desc_limit(&desc,       GET_SMSTATE(u32, ro_smram, 0x7e94));
+	set_desc_base(&desc,        GET_SMSTATE(u32, ro_smram, 0x7e98));
+	base3 =                     GET_SMSTATE(u32, ro_smram, 0x7e9c);
 	ctxt->ops->set_segment(ctxt, selector, &desc, base3, VCPU_SREG_TR);
 
-	dt.size =                   GET_SMSTATE(u32, smstate, 0x7e84);
-	dt.address =                GET_SMSTATE(u64, smstate, 0x7e88);
+	dt.size =                   GET_SMSTATE(u32, ro_smram, 0x7e84);
+	dt.address =                GET_SMSTATE(u64, ro_smram, 0x7e88);
 	ctxt->ops->set_idt(ctxt, &dt);
 
-	selector =                  GET_SMSTATE(u32, smstate, 0x7e70);
-	rsm_set_desc_flags(&desc,   GET_SMSTATE(u32, smstate, 0x7e72) << 8);
-	set_desc_limit(&desc,       GET_SMSTATE(u32, smstate, 0x7e74));
-	set_desc_base(&desc,        GET_SMSTATE(u32, smstate, 0x7e78));
-	base3 =                     GET_SMSTATE(u32, smstate, 0x7e7c);
+	selector =                  GET_SMSTATE(u32, ro_smram, 0x7e70);
+	rsm_set_desc_flags(&desc,   GET_SMSTATE(u32, ro_smram, 0x7e72) << 8);
+	set_desc_limit(&desc,       GET_SMSTATE(u32, ro_smram, 0x7e74));
+	set_desc_base(&desc,        GET_SMSTATE(u32, ro_smram, 0x7e78));
+	base3 =                     GET_SMSTATE(u32, ro_smram, 0x7e7c);
 	ctxt->ops->set_segment(ctxt, selector, &desc, base3, VCPU_SREG_LDTR);
 
-	dt.size =                   GET_SMSTATE(u32, smstate, 0x7e64);
-	dt.address =                GET_SMSTATE(u64, smstate, 0x7e68);
+	dt.size =                   GET_SMSTATE(u32, ro_smram, 0x7e64);
+	dt.address =                GET_SMSTATE(u64, ro_smram, 0x7e68);
 	ctxt->ops->set_gdt(ctxt, &dt);
 
 	r = rsm_enter_protected_mode(ctxt, cr0, cr3, cr4);
@@ -2595,7 +2597,7 @@ static int rsm_load_state_64(struct x86_emulate_ctxt *ctxt,
 		return r;
 
 	for (i = 0; i < 6; i++) {
-		r = rsm_load_seg_64(ctxt, smstate, i);
+		r = rsm_load_seg_64(ctxt, ro_smram, i);
 		if (r != X86EMUL_CONTINUE)
 			return r;
 	}
@@ -2608,6 +2610,7 @@ static int em_rsm(struct x86_emulate_ctxt *ctxt)
 {
 	unsigned long cr0, cr4, efer;
 	char buf[512];
+	u8 *ro_smram;
 	u64 smbase;
 	int ret;
 
@@ -2615,6 +2618,9 @@ static int em_rsm(struct x86_emulate_ctxt *ctxt)
 		return emulate_ud(ctxt);
 
 	smbase = ctxt->ops->get_smbase(ctxt);
+	ro_smram = ctxt->ops->get_ro_smram(ctxt);
+
+	pr_info("kvm: ro_smram: %p\n", ro_smram);
 
 	ret = ctxt->ops->read_phys(ctxt, smbase + 0xfe00, buf, sizeof(buf));
 	if (ret != X86EMUL_CONTINUE)
@@ -2672,10 +2678,10 @@ static int em_rsm(struct x86_emulate_ctxt *ctxt)
 
 #ifdef CONFIG_X86_64
 	if (emulator_has_longmode(ctxt))
-		ret = rsm_load_state_64(ctxt, buf);
+		ret = rsm_load_state_64(ctxt, buf, ro_smram);
 	else
 #endif
-		ret = rsm_load_state_32(ctxt, buf);
+		ret = rsm_load_state_32(ctxt, buf, ro_smram);
 
 	if (ret != X86EMUL_CONTINUE) {
 		/* FIXME: should triple fault */

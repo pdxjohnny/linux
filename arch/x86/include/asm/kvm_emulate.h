@@ -209,6 +209,7 @@ struct x86_emulate_ops {
 	int (*set_dr)(struct x86_emulate_ctxt *ctxt, int dr, ulong value);
 	u64 (*get_smbase)(struct x86_emulate_ctxt *ctxt);
 	void (*set_smbase)(struct x86_emulate_ctxt *ctxt, u64 smbase);
+	u8 *(*get_ro_smram)(struct x86_emulate_ctxt *ctxt);
 	int (*set_msr)(struct x86_emulate_ctxt *ctxt, u32 msr_index, u64 data);
 	int (*get_msr)(struct x86_emulate_ctxt *ctxt, u32 msr_index, u64 *pdata);
 	int (*check_pmc)(struct x86_emulate_ctxt *ctxt, u32 pmc);
