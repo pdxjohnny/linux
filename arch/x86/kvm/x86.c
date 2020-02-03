@@ -7971,8 +7971,8 @@ static void enter_smm(struct kvm_vcpu *vcpu)
 	kvm_x86_ops->pre_enter_smm(vcpu, buf);
 
 	vcpu->arch.hflags |= HF_SMM_MASK;
-	memcpy(vcpu->arch.ro_smram, buf, sizeof(buf));
-	kvm_vcpu_write_guest(vcpu, vcpu->arch.smbase + 0xfe00, buf, sizeof(buf));
+	memcpy(vcpu->arch.ro_smram, buf, X86_SMRAM_SIZE);
+	kvm_vcpu_write_guest(vcpu, vcpu->arch.smbase + 0xfe00, buf, X86_SMRAM_SIZE);
 
 	if (kvm_x86_ops->get_nmi_mask(vcpu))
 		vcpu->arch.hflags |= HF_SMM_INSIDE_NMI_MASK;
