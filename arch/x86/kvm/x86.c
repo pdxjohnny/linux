@@ -7951,6 +7951,7 @@ static void enter_smm(struct kvm_vcpu *vcpu)
 	struct desc_ptr dt;
 	char buf[X86_SMRAM_SIZE];
 	u32 cr0;
+	int i;
 
 	pr_info("kvm: pre enter smm, cr4: %lx\n", vcpu->arch.cr4);
 
@@ -7973,6 +7974,14 @@ static void enter_smm(struct kvm_vcpu *vcpu)
 	vcpu->arch.hflags |= HF_SMM_MASK;
 	memcpy(vcpu->arch.ro_smram, buf, X86_SMRAM_SIZE);
 	kvm_vcpu_write_guest(vcpu, vcpu->arch.smbase + 0xfe00, buf, X86_SMRAM_SIZE);
+
+	pr_info("kvm: ro_smram: %p\n", vcpu->arch.ro_smram);
+	for (i = 0; i < X86_SMRAM_SIZE; i += 8)
+		pr_info("kvm: buf[%04x]: 0x%016llx, ro_smram[%04x]: 0x%016llx\n",
+			i,
+			*(u64 *)(&buf[i]),
+			i,
+			*(u64 *)(&vcpu->arch.ro_smram[i]));
 
 	if (kvm_x86_ops->get_nmi_mask(vcpu))
 		vcpu->arch.hflags |= HF_SMM_INSIDE_NMI_MASK;

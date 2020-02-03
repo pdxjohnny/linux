@@ -2613,6 +2613,7 @@ static int em_rsm(struct x86_emulate_ctxt *ctxt)
 	u8 *ro_smram;
 	u64 smbase;
 	int ret;
+	int i;
 
 	if ((ctxt->ops->get_hflags(ctxt) & X86EMUL_SMM_MASK) == 0)
 		return emulate_ud(ctxt);
@@ -2620,11 +2621,17 @@ static int em_rsm(struct x86_emulate_ctxt *ctxt)
 	smbase = ctxt->ops->get_smbase(ctxt);
 	ro_smram = ctxt->ops->get_ro_smram(ctxt);
 
-	pr_info("kvm: ro_smram: %p\n", ro_smram);
-
 	ret = ctxt->ops->read_phys(ctxt, smbase + 0xfe00, buf, sizeof(buf));
 	if (ret != X86EMUL_CONTINUE)
 		return X86EMUL_UNHANDLEABLE;
+
+	pr_info("kvm: ro_smram: %p\n", ro_smram);
+	for (i = 0; i < 512; i += 8)
+		pr_info("kvm: buf[%04x]: 0x%016llx, ro_smram[%04x]: 0x%016llx\n",
+			i,
+			*(u64 *)(&buf[i]),
+			i,
+			*(u64 *)(&ro_smram[i]));
 
 	if ((ctxt->ops->get_hflags(ctxt) & X86EMUL_SMM_INSIDE_NMI_MASK) == 0)
 		ctxt->ops->set_nmi_mask(ctxt, false);
