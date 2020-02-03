@@ -6267,18 +6267,18 @@ static u64 emulator_get_smbase(struct x86_emulate_ctxt *ctxt)
 	return vcpu->arch.smbase;
 }
 
-static u8 *emulator_get_ro_smram(struct x86_emulate_ctxt *ctxt)
-{
-	struct kvm_vcpu *vcpu = emul_to_vcpu(ctxt);
-
-	return vcpu->arch.ro_smram;
-}
-
 static void emulator_set_smbase(struct x86_emulate_ctxt *ctxt, u64 smbase)
 {
 	struct kvm_vcpu *vcpu = emul_to_vcpu(ctxt);
 
 	vcpu->arch.smbase = smbase;
+}
+
+static u8 *emulator_get_ro_smram(struct x86_emulate_ctxt *ctxt)
+{
+	struct kvm_vcpu *vcpu = emul_to_vcpu(ctxt);
+
+	return vcpu->arch.ro_smram;
 }
 
 static int emulator_check_pmc(struct x86_emulate_ctxt *ctxt,
@@ -6393,8 +6393,8 @@ static const struct x86_emulate_ops emulate_ops = {
 	.get_dr              = emulator_get_dr,
 	.set_dr              = emulator_set_dr,
 	.get_smbase          = emulator_get_smbase,
-	.get_ro_smram        = emulator_get_ro_smram,
 	.set_smbase          = emulator_set_smbase,
+	.get_ro_smram        = emulator_get_ro_smram,
 	.set_msr             = emulator_set_msr,
 	.get_msr             = emulator_get_msr,
 	.check_pmc	     = emulator_check_pmc,

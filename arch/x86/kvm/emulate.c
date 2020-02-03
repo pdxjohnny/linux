@@ -2555,7 +2555,7 @@ static int rsm_load_state_64(struct x86_emulate_ctxt *ctxt,
 	for (i = 0; i < 16; i++)
 		*reg_write(ctxt, i) = GET_SMSTATE(u64, smstate, 0x7ff8 - i * 8);
 
-	ctxt->_eip   = GET_SMSTATE(u64, smstate, 0x7f78);
+	ctxt->_eip   = GET_SMSTATE(u64, ro_smram, 0x7f78);
 	ctxt->eflags = GET_SMSTATE(u32, smstate, 0x7f70) | X86_EFLAGS_FIXED;
 
 	val = GET_SMSTATE(u32, smstate, 0x7f68);
