@@ -60,14 +60,16 @@ exec qemu-system-x86_64 \
         local,id=fsdev-root,path="${CHROOT}",security_model=passthrough,readonly \
     -device \
         virtio-9p-pci,fsdev=fsdev-root,mount_tag=9p_root \
-    -netdev user,id=mynet0 \
-    -device virtio-net-pci,netdev=mynet0 \
+    -net \
+        nic,model=virtio \
+    -net \
+        user,id=mynet0,hostfwd=tcp::22222-:22 \
     -device virtio-rng-pci \
     -netdev socket,id=mynet1,mcast=239.192.168.1:1102 \
     -device virtio-net-pci,netdev=mynet1,mac=$mac \
     -kernel \
         "${CHROOT}/boot/vmlinuz-linux" \
     -append \
-        "console=ttyS0 rootfstype=9p root=9p_root rootflags=trans=virtio,version=9p2000.L,ro init=/usr/lib/systemd/systemd" \
+        "systemd.default_standard_error=ttyS0 systemd.default_standard_output=ttyS0 console=ttyS0 rootfstype=9p root=9p_root rootflags=trans=virtio,version=9p2000.L,ro init=/usr/lib/systemd/systemd" \
     -initrd \
         "${CHROOT}/boot/initramfs-linux-fallback.img"

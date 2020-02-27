@@ -1,0 +1,31 @@
+[Unit]
+Description=Journal tail on %I
+Documentation=man:journalctl(1)
+After=sysinit.target
+
+# On systems without virtual consoles, don't start any getty. (Note
+# that serial gettys are covered by serial-getty@.service, not this
+# unit
+ConditionPathExists=/dev/ttyS0
+
+[Service]
+# the VT is cleared by TTYVTDisallocate
+ExecStart=/bin/sh -c "exec /bin/journalctl -af > /dev/%I 2> /dev/%I"
+Type=idle
+Restart=always
+RestartSec=1
+UtmpIdentifier=%I
+TTYPath=/dev/%I
+TTYReset=yes
+TTYVHangup=yes
+#TTYVTDisallocate=yes
+TTYVTDisallocate=no
+KillMode=process
+IgnoreSIGPIPE=no
+
+# Unset locale for the console getty since the console has problems
+# displaying some internationalized messages.
+Environment=LANG= LANGUAGE= LC_CTYPE= LC_NUMERIC= LC_TIME= LC_COLLATE= LC_MONETARY= LC_MESSAGES= LC_PAPER= LC_NAME= LC_ADDRESS= LC_TELEPHONE= LC_MEASUREMENT= LC_IDENTIFICATION=
+
+[Install]
+Alias=getty.target.wants/journal@ttyS0.service

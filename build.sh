@@ -12,3 +12,10 @@ docker kill "${CONTAINER_NAME}"
 
 mkdir -p dhcpserver-rootfs
 docker export "${CONTAINER_NAME}" | sudo tar -C dhcpserver-rootfs -x
+
+sudo rm -rf dhcpserver-rootfs/root/.ssh/
+sudo mkdir -p dhcpserver-rootfs/root/.ssh/
+cat ~/.ssh/id_rsa.pub | sudo tee dhcpserver-rootfs/root/.ssh/authorized_keys
+sudo chmod 600 dhcpserver-rootfs/root/.ssh/authorized_keys
+sudo chmod 700 dhcpserver-rootfs/root/.ssh
+sudo chroot dhcpserver-rootfs/ systemctl enable --no-reload sshd
