@@ -797,8 +797,16 @@ int kvm_set_cr0(struct kvm_vcpu *vcpu, unsigned long cr0)
 
 	if (!is_smm(vcpu) && !is_guest_mode(vcpu) &&
 	    (((cr0 ^ vcpu->arch.cr0_pinned.high) & vcpu->arch.cr0_pinned.high) ||
-	    ((~cr0 ^ vcpu->arch.cr0_pinned.low) & vcpu->arch.cr0_pinned.low)))
+	    ((~cr0 ^ vcpu->arch.cr0_pinned.low) & vcpu->arch.cr0_pinned.low))) {
+		pr_info("---- BEGIN CR0 VIOLATION ----\n");
+		pr_info("is_smm: %d\n", is_smm(vcpu));
+		pr_info("is_guest_mode: %d\n", is_guest_mode(vcpu));
+		pr_info("cr0: %lx\n", cr0);
+		pr_info("vcpu->arch.cr0_pinned.high: %lx\n", vcpu->arch.cr0_pinned.high);
+		pr_info("vcpu->arch.cr0_pinned.low: %lx\n", vcpu->arch.cr0_pinned.low);
+		pr_info("----  END  CR0 VIOLATION ----\n");
 		return 1;
+	}
 
 	if (!is_paging(vcpu) && (cr0 & X86_CR0_PG)) {
 #ifdef CONFIG_X86_64
@@ -982,8 +990,16 @@ int kvm_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 
 	if (!is_smm(vcpu) && !is_guest_mode(vcpu) &&
 	    (((cr4 ^ vcpu->arch.cr4_pinned.high) & vcpu->arch.cr4_pinned.high) ||
-	    ((~cr4 ^ vcpu->arch.cr4_pinned.low) & vcpu->arch.cr4_pinned.low)))
+	    ((~cr4 ^ vcpu->arch.cr4_pinned.low) & vcpu->arch.cr4_pinned.low))) {
+		pr_info("---- BEGIN CR4 VIOLATION ----\n");
+		pr_info("is_smm: %d\n", is_smm(vcpu));
+		pr_info("is_guest_mode: %d\n", is_guest_mode(vcpu));
+		pr_info("cr4: %lx\n", cr4);
+		pr_info("vcpu->arch.cr4_pinned.high: %lx\n", vcpu->arch.cr4_pinned.high);
+		pr_info("vcpu->arch.cr4_pinned.low: %lx\n", vcpu->arch.cr4_pinned.low);
+		pr_info("----  END  CR4 VIOLATION ----\n");
 		return 1;
+	}
 
 	if (is_long_mode(vcpu)) {
 		if (!(cr4 & X86_CR4_PAE))
