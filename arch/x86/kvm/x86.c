@@ -998,7 +998,7 @@ int kvm_set_cr4(struct kvm_vcpu *vcpu, unsigned long cr4)
 		pr_info("vcpu->arch.cr4_pinned.high: %lx\n", vcpu->arch.cr4_pinned.high);
 		pr_info("vcpu->arch.cr4_pinned.low: %lx\n", vcpu->arch.cr4_pinned.low);
 		pr_info("----  END  CR4 VIOLATION ----\n");
-		return 1;
+		// return 1;
 	}
 
 	if (is_long_mode(vcpu)) {

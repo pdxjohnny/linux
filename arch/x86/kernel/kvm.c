@@ -891,9 +891,9 @@ void __init kvm_paravirt_cr_pinning_init(void)
 	 * it's called prior to init_hypervisor_platform, which calls this
 	 * function. Therefore we need to check if the option is persent here.
 	 */
-	if (IS_ENABLED(KEXEC_CORE) &&
-	    !cmdline_find_option_bool(boot_command_line, "disable_kexec"))
-		return;
+	// if (IS_ENABLED(KEXEC_CORE) &&
+	//     !cmdline_find_option_bool(boot_command_line, "disable_kexec"))
+	// 	return;
 
 	if (cmdline_find_option_bool(boot_command_line, "disable_pv_cr_pin"))
 		return;
@@ -919,6 +919,8 @@ void kvm_setup_paravirt_cr_pinning(unsigned long cr0_pinned_bits,
 
 	rdmsrl(MSR_KVM_CR4_PIN_ALLOWED, mask);
 	wrmsrl(MSR_KVM_CR4_PINNED_HIGH, cr4_pinned_bits & mask);
+
+	pr_info("ENABLED PV_CR_PINNING");
 }
 
 #ifdef CONFIG_ARCH_CPUIDLE_HALTPOLL
