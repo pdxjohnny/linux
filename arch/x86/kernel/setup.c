@@ -484,6 +484,12 @@ static void __init reserve_crashkernel(void)
 	bool high = false;
 	int ret;
 
+	if (cmdline_find_option_bool(boot_command_line, "disable_kexec")) {
+		kexec_load_disabled = 1;
+		pr_info("Ignoring crashkernel due to disable_kexec\n");
+		return;
+	}
+
 	total_mem = memblock_phys_mem_size();
 
 	/* crashkernel=XM */
