@@ -917,6 +917,11 @@
 	disable_ipv6=	[IPV6]
 			See Documentation/networking/ipv6.rst.
 
+	disable_kexec	[KNL,X86] Disable kexec. Due to it's reliance on kexec,
+			crashkernel will be ignored if this option is given.
+			Specifying this option sets the kexec_load_disabled
+			sysctl to 1.
+
 	disable_mtrr_cleanup [X86]
 			The kernel tries to adjust MTRR layout from continuous
 			to discrete, to make X server driver able to add WB
