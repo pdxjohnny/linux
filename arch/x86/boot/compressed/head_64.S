@@ -134,7 +134,7 @@ SYM_FUNC_START(startup_32)
 
 	/* Enable PAE mode */
 	movl	%cr4, %eax
-	orl	$(X86_CR4_PAE | X86_CR4_SMEP), %eax
+	orl	$(X86_CR4_PAE | X86_CR4_SMEP | X86_CR4_SMAP), %eax
 	movl	%eax, %cr4
 
  /*
@@ -621,10 +621,10 @@ SYM_CODE_START(trampoline_32bit_src)
 	popl	%ecx
 
 	/* Enable PAE and LA57 (if required) paging modes */
-	movl	$(X86_CR4_PAE | X86_CR4_SMEP), %eax
+	movl	$(X86_CR4_PAE | X86_CR4_SMEP | X86_CR4_SMAP), %eax
 	cmpl	$0, %edx
 	jz	1f
-	orl	$(X86_CR4_LA57 | X86_CR4_SMEP), %eax
+	orl	$(X86_CR4_LA57 | X86_CR4_SMEP | X86_CR4_SMAP), %eax
 1:
 	movl	%eax, %cr4
 
