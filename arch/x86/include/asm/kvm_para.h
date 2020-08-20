@@ -112,6 +112,7 @@ static inline void kvm_spinlock_init(void)
 }
 #endif /* CONFIG_PARAVIRT_SPINLOCKS */
 
+extern int kvm_paravirt_cr_pinning_enabled;
 void __init kvm_paravirt_cr_pinning_init(void);
 void kvm_setup_paravirt_cr_pinning(unsigned long cr0_pinned_bits,
 				   unsigned long cr4_pinned_bits);
@@ -149,6 +150,8 @@ static inline bool kvm_handle_async_pf(struct pt_regs *regs, u32 token)
 {
 	return false;
 }
+
+static int kvm_paravirt_cr_pinning_enabled = 0;
 
 static inline void kvm_paravirt_cr_pinning_init(void)
 {

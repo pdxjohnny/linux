@@ -104,6 +104,14 @@ struct setup_header {
 	__u32	kernel_info_offset;
 } __attribute__((packed));
 
+struct kernel_info {
+	__u32	header;
+	__u32	size;
+	__u32	size_total;
+	__u32	setup_type_max;
+	__u32	pv_cr_pinning_magic;
+} __attribute__((packed));
+
 struct sys_desc_table {
 	__u16 length;
 	__u8  table[14];

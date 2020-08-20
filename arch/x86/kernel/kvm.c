@@ -881,22 +881,19 @@ void __init kvm_spinlock_init(void)
 
 #endif	/* CONFIG_PARAVIRT_SPINLOCKS */
 
-static int kvm_paravirt_cr_pinning_enabled __ro_after_init;
+int kvm_paravirt_cr_pinning_enabled __ro_after_init;
 
 void __init kvm_paravirt_cr_pinning_init(void)
 {
-	/* Paravirtualized CR pinning is currently incompatible with kexec.
-	 * kexec must be disabled. reserve_crashkernel will set
-	 * kexec_load_disable to 1 if it finds it. However, within arch_setup
-	 * it's called prior to init_hypervisor_platform, which calls this
-	 * function. Therefore we need to check if the option is persent here.
-	 */
-	if (IS_ENABLED(KEXEC_CORE) &&
-	    !cmdline_find_option_bool(boot_command_line, "disable_kexec"))
-		return;
-
 	if (cmdline_find_option_bool(boot_command_line, "disable_pv_cr_pin"))
 		return;
+
+	if (!kvm_para_has_feature(KVM_FEATURE_CR_PIN)) {
+		pr_info_once("Paravirtualized control register pinning feature bit not present");
+		return;
+	}
+
+
 
 	kvm_paravirt_cr_pinning_enabled = 1;
 }
@@ -908,11 +905,6 @@ void kvm_setup_paravirt_cr_pinning(unsigned long cr0_pinned_bits,
 
 	if (!kvm_paravirt_cr_pinning_enabled)
 		return;
-
-	if (!kvm_para_has_feature(KVM_FEATURE_CR_PIN)) {
-		pr_info_once("Paravirtualized control register pinning feature bit not present");
-		return;
-	}
 
 	rdmsrl(MSR_KVM_CR0_PIN_ALLOWED, mask);
 	wrmsrl(MSR_KVM_CR0_PINNED_HIGH, cr0_pinned_bits & mask);
