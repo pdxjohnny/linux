@@ -1,0 +1,14 @@
+menu "KVM driver support"
+        depends on KVM_GUEST
+
+config KVM_SYS_HYPERVISOR
+        bool "Create KVM entries under /sys/hypervisor"
+        depends on SYSFS
+        select SYS_HYPERVISOR
+        default y
+        help
+          Create KVM entries under /sys/hypervisor (e.g., uuid). When running
+          native or on another hypervisor, /sys/hypervisor may still be
+          present, but it will have no KVM entries.
+
+endmenu
