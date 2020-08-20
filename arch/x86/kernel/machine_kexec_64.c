@@ -24,6 +24,7 @@
 #include <asm/io_apic.h>
 #include <asm/debugreg.h>
 #include <asm/kexec-bzimage64.h>
+#include <asm/kvm_para.h>
 #include <asm/setup.h>
 #include <asm/set_memory.h>
 
@@ -585,6 +586,21 @@ void arch_kexec_protect_crashkres(void)
 void arch_kexec_unprotect_crashkres(void)
 {
 	kexec_mark_crashkres(false);
+}
+
+int arch_kexec_load_check(unsigned long nr_segments,
+			  unsigned long flags)
+{
+	/*
+	 * Only allow the kexec file based syscall when paravirtualized control
+	 * register pinning is enabled. File based syscall can preform support
+	 * checks, load based syscall cannot.
+	 */
+	if (IS_ENABLED(CONFIG_KVM_GUEST) && kvm_paravirt_cr_pinning_enabled) {
+		return -EINVAL;
+	}
+
+	return 0;
 }
 
 /*
