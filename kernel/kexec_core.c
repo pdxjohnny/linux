@@ -1219,3 +1219,10 @@ void __weak arch_kexec_protect_crashkres(void)
 
 void __weak arch_kexec_unprotect_crashkres(void)
 {}
+
+/* Allow architecture code to provide additional load checks */
+int __weak arch_kexec_load_check(unsigned long nr_segments,
+				 unsigned long flags)
+{
+	return 0;
+}
