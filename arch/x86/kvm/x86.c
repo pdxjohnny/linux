@@ -9674,7 +9674,7 @@ void kvm_arch_vcpu_destroy(struct kvm_vcpu *vcpu)
 }
 
 #define KVM_CR0_PIN_ALLOWED	(X86_CR0_WP)
-#define KVM_CR4_PIN_ALLOWED	(X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_UMIP)
+#define KVM_CR4_PIN_ALLOWED	(X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_UMIP | X86_CR4_FSGSBASE)
 
 void kvm_vcpu_reset(struct kvm_vcpu *vcpu, bool init_event)
 {
