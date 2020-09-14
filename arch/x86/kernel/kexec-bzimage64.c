@@ -18,6 +18,7 @@
 #include <linux/mm.h>
 #include <linux/efi.h>
 #include <linux/verification.h>
+#include <linux/kvm_para.h>
 
 #include <asm/bootparam.h>
 #include <asm/setup.h>
@@ -263,6 +264,9 @@ static int bzImage64_probe(const char *buf, unsigned long len)
 {
 	int ret = -ENOEXEC;
 	struct setup_header *header;
+	struct kernel_info *info;
+	u32 setup_sects;
+	u32 kernel_start;
 
 	/* kernel should be at least two sectors long */
 	if (len < 2 * 512) {
@@ -281,7 +285,39 @@ static int bzImage64_probe(const char *buf, unsigned long len)
 		return ret;
 	}
 
-	if (header->version < 0x020C) {
+	if (IS_ENABLED(CONFIG_PARAVIRT_CR_PINNING) && kvm_paravirt_cr_pinning_enabled) {
+		if (header->version < 0x020F) {
+			pr_err("Must be at least protocol version 2.15\n");
+			return ret;
+		}
+
+		setup_sects = header->setup_sects;
+		if (!setup_sects)
+			setup_sects = 4;
+
+		kernel_start = (setup_sects + 1) << 9;
+
+		if (len < (sizeof(struct kernel_info) + kernel_start + header->kernel_info_offset)) {
+			pr_err("File is too short to contain kernel_info\n");
+			return ret;
+		}
+
+		info = (struct kernel_info *)(buf + kernel_start + header->kernel_info_offset);
+		if (memcmp((char *)&info->header, "LToP", 4) != 0) {
+			pr_err("Invalid kernel_info header\n");
+			return ret;
+		}
+
+		if (info->size < offsetof(struct kernel_info, pv_cr_pinning_magic)) {
+			pr_err("kernel_info lacks paravirtualized control register pinning magic\n");
+			return ret;
+		}
+
+		if (memcmp((char *)&info->pv_cr_pinning_magic, "PVCR", 4) != 0) {
+			pr_err("Paravirtualized control register pinning enabled but bzImage lacks support\n");
+			return ret;
+		}
+	} else if (header->version < 0x020C) {
 		pr_err("Must be at least protocol version 2.12\n");
 		return ret;
 	}
