@@ -347,6 +347,8 @@ out:
 	cr4_clear_bits(X86_CR4_UMIP);
 }
 
+static const unsigned long cr0_pinned_mask = X86_CR0_WP;
+static const unsigned long cr0_pinned_bits = cr0_pinned_mask;
 /* These bits should not change their value after CPU init is finished. */
 static const unsigned long cr4_pinned_mask =
 	X86_CR4_SMEP | X86_CR4_SMAP | X86_CR4_UMIP | X86_CR4_FSGSBASE;
@@ -355,19 +357,20 @@ static unsigned long cr4_pinned_bits __ro_after_init;
 
 void native_write_cr0(unsigned long val)
 {
-	unsigned long bits_missing = 0;
+	unsigned long bits_changed = 0;
 
 set_register:
 	asm volatile("mov %0,%%cr0": "+r" (val), "+m" (__force_order));
 
 	if (static_branch_likely(&cr_pinning)) {
-		if (unlikely((val & X86_CR0_WP) != X86_CR0_WP)) {
-			bits_missing = X86_CR0_WP;
-			val |= bits_missing;
+		if (unlikely((val & cr0_pinned_mask) != cr0_pinned_bits)) {
+			bits_changed = (val & cr0_pinned_mask) ^ cr0_pinned_bits;
+			val = (val & ~cr0_pinned_mask) | cr0_pinned_bits;
 			goto set_register;
 		}
-		/* Warn after we've set the missing bits. */
-		WARN_ONCE(bits_missing, "CR0 WP bit went missing!?\n");
+		/* Warn after we've corrected the changed bits. */
+		WARN_ONCE(bits_changed, "pinned CR0 bits changed: 0x%lx!?\n",
+			  bits_changed);
 	}
 }
 EXPORT_SYMBOL(native_write_cr0);
